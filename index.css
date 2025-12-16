@@ -1,0 +1,22 @@
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #101622; 
+}
+::-webkit-scrollbar-thumb {
+    background: #232f48; 
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #2b6cee; 
+}
+
+.glass-panel {
+    background: rgba(26, 34, 48, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
