@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { dataService } from '../services/api';
 import { Course } from '../types';
 import Layout from './Layout';
-import { Plus, Trash, Search, Music } from 'lucide-react';
+import { Plus, Trash, Search, Music, Eye, Hash } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const CourseManager: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const navigate = useNavigate();
 
   // Simple Create Form State
   const [newCourseName, setNewCourseName] = useState('');
@@ -31,7 +33,6 @@ const CourseManager: React.FC = () => {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Assuming typical POST structure based on prompt requirement to implement real fetch
       await dataService.request('/cursos', 'POST', { nombre: newCourseName });
       setNewCourseName('');
       fetchCourses(); // Reload
@@ -41,7 +42,7 @@ const CourseManager: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Eliminar curso?')) return;
+    if (!confirm('¿Eliminar curso?')) return;
     try {
       await dataService.request(`/cursos/${id}`, 'DELETE');
       setCourses(prev => prev.filter(c => c.cursoId !== id));
@@ -102,21 +103,47 @@ const CourseManager: React.FC = () => {
              </div>
           ) : (
             filteredCourses.map(course => (
-              <div key={course.cursoId} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex justify-between items-start group hover:shadow-md transition">
-                <div>
-                  <div className="bg-indigo-50 text-indigo-600 p-3 rounded-lg w-fit mb-3">
+              <div key={course.cursoId} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-between group hover:shadow-md transition">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="bg-indigo-50 text-indigo-600 p-3 rounded-lg w-fit">
                      <Music size={24} />
+                  </div>
+                  <div className="flex gap-1">
+                    <button 
+                      onClick={() => navigate(`/cursos/${course.cursoId}`)}
+                      className="text-blue-500 hover:text-blue-700 transition-colors p-2 hover:bg-blue-50 rounded-lg"
+                      title="Ver alumnos inscritos"
+                    >
+                      <Eye size={18} />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(course.cursoId)}
+                      className="text-gray-300 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg"
+                      title="Eliminar curso"
+                    >
+                      <Trash size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="flex items-center gap-1 text-[10px] font-mono font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200">
+                      <Hash size={10} /> ID: {course.cursoId}
+                    </span>
                   </div>
                   <h4 className="font-bold text-lg text-slate-800">{course.nombre}</h4>
                   <p className="text-sm text-slate-500 mt-1">{course.descripcion || "Sin descripción"}</p>
                 </div>
-                <button 
-                  onClick={() => handleDelete(course.cursoId)}
-                  className="text-gray-300 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg"
-                  title="Eliminar curso"
-                >
-                  <Trash size={18} />
-                </button>
+
+                <div className="mt-6">
+                  <button 
+                    onClick={() => navigate(`/cursos/${course.cursoId}`)}
+                    className="w-full flex items-center justify-center gap-2 py-2 text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition"
+                  >
+                    Detalle de Alumnos <Eye size={16} />
+                  </button>
+                </div>
               </div>
             ))
           )}

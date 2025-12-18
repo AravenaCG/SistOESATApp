@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import Layout from './Layout';
 import { INSTRUMENT_MAP } from '../constants';
@@ -180,7 +181,8 @@ const InstrumentManager: React.FC = () => {
         </div>
 
         <div className="space-y-8">
-          {Object.entries(groupedInventory).map(([groupName, items]) => (
+          {/* Fix: Added explicit typing for Object.entries results to ensure 'items' is inferred as InventoryItem[] */}
+          {(Object.entries(groupedInventory) as [string, InventoryItem[]][]).map(([groupName, items]) => (
             <div key={groupName} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               {/* Group Header */}
               <div className="bg-slate-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
