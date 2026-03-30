@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { dataService } from '../services/api';
+import { dataService, authService } from '../services/api';
 import { Student, InstrumentLoan } from '../types';
 import { getInstrumentName } from '../constants';
 import Layout from './Layout';
-import { Guitar, ArrowRightLeft, Check, AlertCircle } from 'lucide-react';
+import { Guitar, ArrowRightLeft, Check, AlertCircle, QrCode, X } from 'lucide-react';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 
 const StudentProfile: React.FC = () => {
   const { id } = useParams();
@@ -12,100 +13,166 @@ const StudentProfile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   
   // Loan State
-  const [loanCode, setLoanCode] = useState('');
+  const [availableStock, setAvailableStock] = useState<any[]>([]);
+  const [selectedStockId, setSelectedStockId] = useState<string>('');
   const [processingLoan, setProcessingLoan] = useState(false);
+  const [studentLoans, setStudentLoans] = useState<any[]>([]);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scannerMode, setScannerMode] = useState<'lend' | 'return' | null>(null);
+  const [scannerError, setScannerError] = useState<string | null>(null);
 
-  const fetchStudentAndCourses = async () => {
+  const role = authService.getUserRole();
+  const isStudent = role === 'student';
+
+  const fetchStudentData = async () => {
       try {
         setLoading(true);
         
-        // Parallel fetch for student details and their courses to ensure we have all data
-        const [studentData, coursesData] = await Promise.all([
+        const [studentData, coursesData, loansData] = await Promise.all([
             dataService.request(`/estudiante/${id}`),
-            dataService.request(`/cursosByEstudiante/${id}`).catch(() => []) // Fallback to empty if 404/error
+            dataService.request(`/cursosByEstudiante/${id}`).catch(() => []),
+            dataService.getPrestamosEstudiante(id!)
         ]);
         
-        // Merge courses into student object
-        // The API might return courses in the main object, or separate. We prioritize the explicit list if available.
-        // We also handle potential casing differences in the API response (Cursos vs cursos)
         const courses = Array.isArray(coursesData) ? coursesData : (studentData.cursos || studentData.Cursos || []);
         
         setStudent({
             ...studentData,
             cursos: courses
         });
+        setStudentLoans(loansData);
+
+        // Fetch available instruments for this student's instrument type
+        if (studentData.instrumentoId) {
+          const stock = await dataService.getDisponibles(studentData.instrumentoId);
+          setAvailableStock(stock);
+        }
 
       } catch (error) {
         console.error(error);
-        alert('Error al cargar perfil del estudiante');
+        // alert('Error al cargar perfil del estudiante');
       } finally {
         setLoading(false);
       }
   };
 
   useEffect(() => {
-    if (id) fetchStudentAndCourses();
+    if (id) fetchStudentData();
   }, [id]);
 
-  // Handle Lend Instrument (Mocking API Call)
+  // Handle Lend Instrument
   const handleLendInstrument = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loanCode.trim()) return;
+    if (!selectedStockId) return;
     
-    if(!confirm(`¿Confirma el préstamo del instrumento ${loanCode} a este estudiante?`)) return;
+    const selectedItem = availableStock.find(s => s.stockInstrumentoId.toString() === selectedStockId);
+    if(!confirm(`¿Confirma el préstamo del instrumento ${selectedItem?.codigoInventario} a este estudiante?`)) return;
 
     setProcessingLoan(true);
     try {
-      // Simulation of POST /prestamos
-      await new Promise(resolve => setTimeout(resolve, 800)); // Network delay
+      await dataService.asignarPrestamo({
+        estudianteId: id,
+        stockInstrumentoId: parseInt(selectedStockId)
+      });
       
-      const newLoan: InstrumentLoan = {
-          prestamoInstrumentoId: Math.random().toString(),
-          fechaPrestamo: new Date().toISOString(),
-          fechaDevolucion: null,
-          instrumentoId: loanCode,
-          detalleInstrumento: 'Asignado recientemente'
-      };
-      
-      if (student) {
-          const updatedLoans = [...(student.prestamosInstrumentos || []), newLoan];
-          setStudent({ ...student, prestamosInstrumentos: updatedLoans });
-      }
-      
-      setLoanCode('');
+      await fetchStudentData();
+      setSelectedStockId('');
       alert('Instrumento prestado correctamente');
-    } catch (e) {
-      alert('Error al procesar el préstamo');
+    } catch (e: any) {
+      alert(e.message || 'Error al procesar el préstamo');
     } finally {
       setProcessingLoan(false);
     }
   };
 
   // Handle Return Instrument
-  const handleReturnInstrument = async (loanId: string, instrumentCode: string) => {
+  const handleReturnInstrument = async (stockId: number, instrumentCode: string) => {
      if(!confirm(`¿Confirma la devolución del instrumento ${instrumentCode}?`)) return;
      
      setProcessingLoan(true);
      try {
-        // Simulation of PUT /prestamos/devolucion
-        await new Promise(resolve => setTimeout(resolve, 800));
+        await dataService.devolverPrestamo({
+          stockInstrumentoId: stockId
+        });
         
-        if (student && student.prestamosInstrumentos) {
-            const updatedLoans = student.prestamosInstrumentos.map(loan => {
-                if (loan.prestamoInstrumentoId === loanId) {
-                    return { ...loan, fechaDevolucion: new Date().toISOString() };
-                }
-                return loan;
-            });
-            setStudent({ ...student, prestamosInstrumentos: updatedLoans });
-        }
+        await fetchStudentData();
         alert('Instrumento devuelto correctamente');
-     } catch (e) {
-         alert('Error al procesar la devolución');
+     } catch (e: any) {
+         alert(e.message || 'Error al procesar la devolución');
      } finally {
          setProcessingLoan(false);
      }
   };
+
+  // QR Scanner Logic
+  useEffect(() => {
+    let scanner: Html5QrcodeScanner | null = null;
+
+    if (showScanner) {
+      scanner = new Html5QrcodeScanner(
+        "qr-reader",
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        /* verbose= */ false
+      );
+
+      scanner.render(onScanSuccess, onScanFailure);
+    }
+
+    return () => {
+      if (scanner) {
+        scanner.clear().catch(error => console.error("Failed to clear scanner", error));
+      }
+    };
+  }, [showScanner]);
+
+  async function onScanSuccess(decodedText: string) {
+    setShowScanner(false);
+    setScannerError(null);
+
+    // decodedText could be stockInstrumentoId or codigoInventario
+    if (scannerMode === 'lend') {
+      // Find instrument in available stock
+      const item = availableStock.find(s => 
+        s.stockInstrumentoId.toString() === decodedText || 
+        s.codigoInventario === decodedText
+      );
+
+      if (item) {
+        setSelectedStockId(item.stockInstrumentoId.toString());
+        // Trigger lend automatically or just select it
+        // For better UX, let's just select it and show the form, or auto-submit if confirmed
+        if (confirm(`¿Desea tomar en préstamo el instrumento ${item.codigoInventario}?`)) {
+            try {
+                setProcessingLoan(true);
+                await dataService.asignarPrestamo({
+                    estudianteId: id,
+                    stockInstrumentoId: item.stockInstrumentoId
+                });
+                await fetchStudentData();
+                alert('Instrumento prestado correctamente');
+            } catch (e: any) {
+                alert(e.message || 'Error al procesar el préstamo');
+            } finally {
+                setProcessingLoan(false);
+            }
+        }
+      } else {
+        alert('Instrumento no encontrado o no disponible para préstamo.');
+      }
+    } else if (scannerMode === 'return') {
+      if (activeLoan) {
+        if (activeLoan.stockInstrumentoId.toString() === decodedText || activeLoan.codigoInventario === decodedText) {
+          handleReturnInstrument(activeLoan.stockInstrumentoId, activeLoan.codigoInventario || 'S/C');
+        } else {
+          alert('El código escaneado no coincide con el instrumento que tienes en préstamo.');
+        }
+      }
+    }
+  }
+
+  function onScanFailure(error: any) {
+    // console.warn(`Code scan error = ${error}`);
+  }
 
   if (loading) {
     return (
@@ -161,8 +228,7 @@ const StudentProfile: React.FC = () => {
   const currentOrquestaLabel = getOrquestaLabel();
 
   // Find active loan (where fechaDevolucion is null)
-  const loans = student.prestamosInstrumentos || [];
-  const activeLoan = loans.find(l => !l.fechaDevolucion);
+  const activeLoan = studentLoans.find(l => !l.fechaDevolucion);
   
   // If no structured loan, but we have a legacy string identifier
   const legacyInstrument = !activeLoan && student.instrumento ? student.instrumento : null;
@@ -187,7 +253,7 @@ const StudentProfile: React.FC = () => {
                 <span className="absolute top-0 right-0 size-2 bg-red-500 rounded-full border-2 border-[#111722]"></span>
              </button>
              <div className="size-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs border border-border-dark">
-                Admin
+                {isStudent ? 'Estudiante' : 'Admin'}
              </div>
           </div>
         </header>
@@ -212,9 +278,11 @@ const StudentProfile: React.FC = () => {
                     </div>
                   )}
                   
-                  <button className="absolute bottom-2 right-2 bg-primary text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-600">
-                     <span className="material-symbols-outlined text-[18px]">edit</span>
-                  </button>
+                  {!isStudent && (
+                    <button className="absolute bottom-2 right-2 bg-primary text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-600">
+                       <span className="material-symbols-outlined text-[18px]">edit</span>
+                    </button>
+                  )}
                 </div>
                 
                 <div className="flex-1 flex flex-col gap-2 mb-2">
@@ -331,33 +399,38 @@ const StudentProfile: React.FC = () => {
                         /* Case 1: Has Active Loan */
                         <div className="bg-[#232f48] rounded-xl p-5 border border-orange-500/30 relative overflow-hidden">
                            <div className="absolute top-0 right-0 p-2 bg-orange-500 text-[#101622] font-bold text-[10px] rounded-bl-xl uppercase tracking-wider">
-                              En Préstamo
+                               En Préstamo
                            </div>
                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                               <div>
                                  <span className="text-[#92a4c9] text-xs font-bold uppercase tracking-wider block mb-1">Código Instrumento</span>
-                                 <div className="text-2xl font-mono font-bold text-white mb-1">{activeLoan.instrumentoId}</div>
+                                 <div className="text-2xl font-mono font-bold text-white mb-1">{activeLoan.codigoInventario}</div>
                                  <div className="flex items-center gap-2 text-xs text-[#92a4c9]">
                                     <span className="material-symbols-outlined text-sm">calendar_today</span>
                                     Prestado el: {new Date(activeLoan.fechaPrestamo).toLocaleDateString()}
                                  </div>
-                                 {activeLoan.detalleInstrumento && (
-                                     <div className="mt-2 text-xs text-blue-300 bg-blue-500/10 px-2 py-1 rounded inline-block">
-                                        {activeLoan.detalleInstrumento}
-                                     </div>
-                                 )}
                               </div>
-                              <button 
-                                onClick={() => handleReturnInstrument(activeLoan.prestamoInstrumentoId, activeLoan.instrumentoId)}
-                                disabled={processingLoan}
-                                className="w-full sm:w-auto px-5 py-3 bg-white text-slate-900 font-bold rounded-lg hover:bg-gray-200 transition flex items-center justify-center gap-2 disabled:opacity-50"
-                              >
-                                {processingLoan ? 'Procesando...' : (
-                                   <>
-                                     <ArrowRightLeft size={18} /> Devolver Instrumento
-                                   </>
+                              <div className="flex flex-col sm:flex-row gap-3">
+                                <button 
+                                  onClick={() => { setScannerMode('return'); setShowScanner(true); }}
+                                  className="w-full sm:w-auto px-5 py-3 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition flex items-center justify-center gap-2"
+                                >
+                                  <QrCode size={18} /> Devolver con QR
+                                </button>
+                                {!isStudent && (
+                                  <button 
+                                    onClick={() => handleReturnInstrument(activeLoan.stockInstrumentoId, activeLoan.codigoInventario || 'S/C')}
+                                    disabled={processingLoan}
+                                    className="w-full sm:w-auto px-5 py-3 bg-white text-slate-900 font-bold rounded-lg hover:bg-gray-200 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                                  >
+                                    {processingLoan ? 'Procesando...' : (
+                                       <>
+                                         <ArrowRightLeft size={18} /> Devolver Manual
+                                       </>
+                                    )}
+                                  </button>
                                 )}
-                              </button>
+                              </div>
                            </div>
                         </div>
                      ) : legacyInstrument ? (
@@ -377,27 +450,53 @@ const StudentProfile: React.FC = () => {
                      ) : (
                         /* Case 3: No Active Loan - Show Lend Form */
                         <div className="bg-[#232f48]/50 rounded-xl p-5 border border-white/5 border-dashed">
-                           <h4 className="text-white font-bold mb-3 text-sm">Asignar Nuevo Préstamo</h4>
-                           <form onSubmit={handleLendInstrument} className="flex flex-col sm:flex-row gap-3">
-                              <input 
-                                type="text" 
-                                placeholder="Escanee o ingrese código (ej. VIO-01-001)"
-                                className="flex-1 bg-[#101622] border border-border-dark text-white px-4 py-2.5 rounded-lg focus:ring-1 focus:ring-orange-500 outline-none font-mono"
-                                value={loanCode}
-                                onChange={(e) => setLoanCode(e.target.value)}
-                              />
+                           <h4 className="text-white font-bold mb-3 text-sm">
+                              {isStudent ? 'Estado del Instrumento' : 'Asignar Nuevo Préstamo'}
+                           </h4>
+                           
+                           <div className="flex flex-col gap-4">
                               <button 
-                                type="submit"
-                                disabled={!loanCode || processingLoan}
-                                className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                onClick={() => { setScannerMode('lend'); setShowScanner(true); }}
+                                className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition flex items-center justify-center gap-2"
                               >
-                                {processingLoan ? 'Procesando...' : (
-                                    <>
-                                        <Check size={18} /> Prestar
-                                    </>
-                                )}
+                                <QrCode size={20} /> Escanear QR para Préstamo
                               </button>
-                           </form>
+
+                              {!isStudent && (
+                                <div className="pt-4 border-t border-white/5">
+                                  <p className="text-xs text-[#92a4c9] mb-3 uppercase font-bold tracking-wider">Asignación Manual (Admin)</p>
+                                  <form onSubmit={handleLendInstrument} className="flex flex-col sm:flex-row gap-3">
+                                     <select 
+                                       className="flex-1 bg-[#101622] border border-border-dark text-white px-4 py-2.5 rounded-lg focus:ring-1 focus:ring-orange-500 outline-none font-sans"
+                                       value={selectedStockId}
+                                       onChange={(e) => setSelectedStockId(e.target.value)}
+                                     >
+                                       <option value="">Seleccione un instrumento disponible...</option>
+                                       {availableStock.map(item => (
+                                         <option key={item.stockInstrumentoId} value={item.stockInstrumentoId}>
+                                           {item.codigoInventario} {item.numeroSerie ? `(SN: ${item.numeroSerie})` : ''}
+                                         </option>
+                                       ))}
+                                     </select>
+                                     <button 
+                                       type="submit"
+                                       disabled={!selectedStockId || processingLoan}
+                                       className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                     >
+                                       {processingLoan ? 'Procesando...' : (
+                                           <>
+                                               <Check size={18} /> Prestar
+                                           </>
+                                       )}
+                                     </button>
+                                  </form>
+                                </div>
+                              )}
+                           </div>
+
+                           {availableStock.length === 0 && !isStudent && (
+                             <p className="text-xs text-red-400 mt-2">No hay ejemplares disponibles para {getInstrumentName(student.instrumentoId)}.</p>
+                           )}
                         </div>
                      )}
                  </div>
@@ -436,6 +535,31 @@ const StudentProfile: React.FC = () => {
           </div>
         </main>
       </div>
+      {/* QR Scanner Modal */}
+      {showScanner && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
+          <div className="bg-[#111722] border border-border-dark rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div className="p-4 border-b border-border-dark flex items-center justify-between">
+              <h3 className="text-white font-bold flex items-center gap-2">
+                <QrCode size={20} className="text-blue-500" />
+                {scannerMode === 'lend' ? 'Escanear para Préstamo' : 'Escanear para Devolución'}
+              </h3>
+              <button 
+                onClick={() => setShowScanner(false)}
+                className="text-[#92a4c9] hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-6">
+              <div id="qr-reader" className="overflow-hidden rounded-xl border border-white/10 bg-black"></div>
+              <p className="text-center text-[#92a4c9] text-sm mt-4">
+                Apunte la cámara al código QR del instrumento
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };

@@ -19,11 +19,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const location = useLocation();
 
-  const menuItems = [
-    { path: '/dashboard', label: 'Estudiantes', icon: <Users size={20} /> },
-    { path: '/cursos', label: 'Cursos', icon: <Music size={20} /> },
-    { path: '/instrumentos', label: 'Instrumentos', icon: <Guitar size={20} /> },
-  ];
+  const role = authService.getUserRole();
+  const estudianteId = authService.getEstudianteId();
+
+  const menuItems = role === 'student' 
+    ? [
+        { path: `/estudiantes/${estudianteId}`, label: 'Mi Perfil', icon: <Users size={20} /> },
+      ]
+    : [
+        { path: '/dashboard', label: 'Estudiantes', icon: <Users size={20} /> },
+        { path: '/cursos', label: 'Cursos', icon: <Music size={20} /> },
+        { path: '/instrumentos', label: 'Instrumentos', icon: <Guitar size={20} /> },
+      ];
 
   const handleLogout = () => {
     authService.logout();

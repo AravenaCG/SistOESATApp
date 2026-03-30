@@ -1,14 +1,52 @@
 
 export interface AuthResponse {
   token: string;
+  role?: 'admin' | 'student';
+  estudianteId?: string;
+}
+
+export interface StockInstrumento {
+  stockInstrumentoId: number;
+  codigoInventario: string;
+  numeroSerie?: string;
+  estado: 'Disponible' | 'Prestado' | 'Mantenimiento';
+  instrumentoId: number;
+}
+
+export interface PrestamosInstrumento {
+  prestamoInstrumentoId: number;
+  fechaPrestamo: string;
+  fechaDevolucion?: string | null;
+  instrumentoId: number;
+  stockInstrumentoId: number;
+  estudianteId: string;
+}
+
+export interface CreateStockDto {
+  instrumentoId: number;
+  codigoInventario: string;
+  numeroSerie?: string;
+}
+
+export interface AsignarPrestamoDto {
+  estudianteId: string;
+  stockInstrumentoId: number;
+}
+
+export interface DevolverPrestamoDto {
+  stockInstrumentoId: number;
 }
 
 export interface InstrumentLoan {
-  prestamoInstrumentoId: string;
+  prestamoInstrumentoId: number;
   fechaPrestamo: string;
   fechaDevolucion?: string | null;
-  instrumentoId: string; // Code e.g. VIO-01-001
-  detalleInstrumento?: string; // Snapshot of instrument details
+  instrumentoId: number;
+  stockInstrumentoId: number;
+  estudianteId: string;
+  // Optional details for UI
+  codigoInventario?: string;
+  nombreInstrumento?: string;
 }
 
 export interface Student {

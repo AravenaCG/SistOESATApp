@@ -1,80 +1,76 @@
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Layout from './Layout';
 import { INSTRUMENT_MAP } from '../constants';
-import { InventoryItem } from '../types';
+import { StockInstrumento, CreateStockDto } from '../types';
+import { dataService } from '../services/api';
 import { QRCodeSVG } from 'qrcode.react';
-import { Printer, Download, Package, Plus, X } from 'lucide-react';
+import { Printer, Download, Package, Plus, X, Loader2, AlertCircle } from 'lucide-react';
 
 const InstrumentManager: React.FC = () => {
   
-  // State for the inventory (initialized with mocks, but editable)
-  const [inventory, setInventory] = useState<InventoryItem[]>(() => {
-    const items: InventoryItem[] = [];
-    Object.entries(INSTRUMENT_MAP).forEach(([id, name]) => {
-      const count = Math.floor(Math.random() * 2) + 1; 
-      for (let i = 1; i <= count; i++) {
-        const typeId = Number(id);
-        const code = `${name.substring(0, 3).toUpperCase()}-${String(typeId).padStart(2, '0')}-${String(i).padStart(3, '0')}`;
-        items.push({
-          id: code,
-          typeId: typeId,
-          name: name,
-          serial: `SN-${Math.random().toString(36).substring(7).toUpperCase()}`,
-          condition: Math.random() > 0.8 ? 'Regular' : 'Bueno',
-          detail: 'Propiedad de la escuela'
-        });
-      }
-    });
-    return items;
-  });
+  // State for the inventory
+  const [inventory, setInventory] = useState<StockInstrumento[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newInstrument, setNewInstrument] = useState({
-    typeId: 1,
-    serial: '',
-    condition: 'Bueno',
-    detail: ''
+  const [newInstrument, setNewInstrument] = useState<CreateStockDto>({
+    instrumentoId: 1,
+    codigoInventario: '',
+    numeroSerie: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch Inventory
+  const fetchInventory = async () => {
+    try {
+      setLoading(true);
+      const data = await dataService.getStock();
+      setInventory(data);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar el inventario');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInventory();
+  }, []);
 
   // Grouping Logic
   const groupedInventory = useMemo(() => {
     return inventory.reduce((acc, item) => {
-      if (!acc[item.name]) {
-        acc[item.name] = [];
+      const name = INSTRUMENT_MAP[item.instrumentoId] || 'Desconocido';
+      if (!acc[name]) {
+        acc[name] = [];
       }
-      acc[item.name].push(item);
+      acc[name].push(item);
       return acc;
-    }, {} as Record<string, InventoryItem[]>);
+    }, {} as Record<string, StockInstrumento[]>);
   }, [inventory]);
 
   // Handle Create Instrument
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const typeName = INSTRUMENT_MAP[newInstrument.typeId];
-    // Simple logic to generate next ID
-    const specificItems = inventory.filter(i => i.typeId === newInstrument.typeId);
-    const nextNum = specificItems.length + 1;
-    const code = `${typeName.substring(0, 3).toUpperCase()}-${String(newInstrument.typeId).padStart(2, '0')}-${String(nextNum).padStart(3, '0')}`;
-
-    const newItem: InventoryItem = {
-      id: code,
-      typeId: newInstrument.typeId,
-      name: typeName,
-      serial: newInstrument.serial || 'S/N',
-      condition: newInstrument.condition,
-      detail: newInstrument.detail
-    };
-
-    setInventory([...inventory, newItem]);
-    setIsModalOpen(false);
-    setNewInstrument({ typeId: 1, serial: '', condition: 'Bueno', detail: '' });
+    try {
+      setIsSubmitting(true);
+      await dataService.createStock(newInstrument);
+      await fetchInventory();
+      setIsModalOpen(false);
+      setNewInstrument({ instrumentoId: 1, codigoInventario: '', numeroSerie: '' });
+    } catch (err: any) {
+      alert(err.message || 'Error al crear el ejemplar');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Printing Logic
-  const handlePrint = (title: string, items: InventoryItem[]) => {
+  const handlePrint = (title: string, items: StockInstrumento[]) => {
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     if (!printWindow) {
       alert('Por favor habilite las ventanas emergentes para imprimir');
@@ -125,16 +121,16 @@ const InstrumentManager: React.FC = () => {
           <h1>Inventario: ${title}</h1>
           <div class="grid">
             ${items.map(item => {
-              // Updated QR Data to include 'd' (detail)
-              const qrData = JSON.stringify({ id: item.id, type: item.name, s: item.serial, d: item.detail || '' });
+              const name = INSTRUMENT_MAP[item.instrumentoId] || 'Desconocido';
+              const qrData = JSON.stringify({ id: item.stockInstrumentoId, code: item.codigoInventario, type: name, s: item.numeroSerie || '' });
               const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
               
               return `
                 <div class="label-card">
                   <img src="${qrUrl}" class="qr-code" alt="QR" />
-                  <div class="item-name">${item.name}</div>
-                  <div class="item-code">${item.id}</div>
-                  <div class="item-detail">${item.detail || ''}</div>
+                  <div class="item-name">${name}</div>
+                  <div class="item-code">${item.codigoInventario}</div>
+                  <div class="item-detail">${item.estado}</div>
                 </div>
               `;
             }).join('')}
@@ -153,6 +149,17 @@ const InstrumentManager: React.FC = () => {
     printWindow.document.write(htmlContent);
     printWindow.document.close();
   };
+
+  if (loading && inventory.length === 0) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+          <p className="text-slate-500 font-medium">Cargando inventario...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -180,9 +187,15 @@ const InstrumentManager: React.FC = () => {
           </div>
         </div>
 
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl flex items-center gap-3">
+            <AlertCircle size={20} />
+            <p>{error}</p>
+          </div>
+        )}
+
         <div className="space-y-8">
-          {/* Fix: Added explicit typing for Object.entries results to ensure 'items' is inferred as InventoryItem[] */}
-          {(Object.entries(groupedInventory) as [string, InventoryItem[]][]).map(([groupName, items]) => (
+          {(Object.entries(groupedInventory) as [string, StockInstrumento[]][]).map(([groupName, items]) => (
             <div key={groupName} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               {/* Group Header */}
               <div className="bg-slate-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
@@ -211,12 +224,12 @@ const InstrumentManager: React.FC = () => {
               <div className="p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                   {items.map((item) => (
-                    <div key={item.id} className="group relative bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 flex flex-col items-center p-4">
+                    <div key={item.stockInstrumentoId} className="group relative bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 flex flex-col items-center p-4">
                        
                        {/* QR Section */}
                        <div className="mb-3 p-2 bg-white rounded-lg border border-gray-100 shadow-inner group-hover:scale-105 transition-transform">
                          <QRCodeSVG 
-                            value={JSON.stringify({ id: item.id, type: item.name, s: item.serial, d: item.detail || '' })} 
+                            value={JSON.stringify({ id: item.stockInstrumentoId, code: item.codigoInventario, type: groupName, s: item.numeroSerie || '' })} 
                             size={100}
                             level="M"
                          />
@@ -224,22 +237,22 @@ const InstrumentManager: React.FC = () => {
 
                        {/* Info */}
                        <div className="text-center w-full">
-                         <h3 className="font-bold text-slate-800 truncate" title={item.name}>{item.name}</h3>
+                         <h3 className="font-bold text-slate-800 truncate" title={groupName}>{groupName}</h3>
                          <div className="mt-1 flex justify-center">
                            <span className="font-mono text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                             {item.id}
+                             {item.codigoInventario}
                            </span>
                          </div>
-                         <p className="text-[10px] text-slate-400 mt-1">SN: {item.serial}</p>
-                         {item.detail && (
-                             <p className="text-[10px] text-blue-500 mt-1 truncate px-2">{item.detail}</p>
-                         )}
+                         <p className="text-[10px] text-slate-400 mt-1">SN: {item.numeroSerie || 'S/N'}</p>
+                         <p className={`text-[10px] font-bold mt-1 px-2 ${item.estado === 'Disponible' ? 'text-green-600' : 'text-orange-600'}`}>
+                           {item.estado}
+                         </p>
                        </div>
 
                        {/* Actions Overlay (visible on hover) */}
                        <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
                           <button 
-                            onClick={() => handlePrint(item.name, [item])}
+                            onClick={() => handlePrint(groupName, [item])}
                             className="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-blue-50 transform hover:scale-105 transition-all shadow-xl"
                           >
                             <Download size={16} />
@@ -248,13 +261,26 @@ const InstrumentManager: React.FC = () => {
                        </div>
                        
                        {/* Status Dot */}
-                       <div className={`absolute top-3 right-3 w-2 h-2 rounded-full ${item.condition === 'Bueno' ? 'bg-green-500' : 'bg-orange-500'}`} title={`Estado: ${item.condition}`}></div>
+                       <div className={`absolute top-3 right-3 w-2 h-2 rounded-full ${item.estado === 'Disponible' ? 'bg-green-500' : 'bg-orange-500'}`} title={`Estado: ${item.estado}`}></div>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
           ))}
+          
+          {inventory.length === 0 && !loading && (
+            <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-300">
+              <Package className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-500">No hay instrumentos registrados en el inventario.</p>
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="mt-4 text-blue-600 font-bold hover:underline"
+              >
+                Dar de alta el primer instrumento
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Create Modal */}
@@ -272,8 +298,8 @@ const InstrumentManager: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Instrumento</label>
                   <select 
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={newInstrument.typeId}
-                    onChange={e => setNewInstrument({...newInstrument, typeId: Number(e.target.value)})}
+                    value={newInstrument.instrumentoId}
+                    onChange={e => setNewInstrument({...newInstrument, instrumentoId: Number(e.target.value)})}
                   >
                     {Object.entries(INSTRUMENT_MAP).map(([id, name]) => (
                       <option key={id} value={id}>{name}</option>
@@ -282,53 +308,43 @@ const InstrumentManager: React.FC = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Número de Serie</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Código de Inventario (Único)</label>
                   <input 
                     type="text"
                     required
-                    placeholder="ej. SN-99382"
+                    placeholder="ej. CB-001"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={newInstrument.serial}
-                    onChange={e => setNewInstrument({...newInstrument, serial: e.target.value})}
+                    value={newInstrument.codigoInventario}
+                    onChange={e => setNewInstrument({...newInstrument, codigoInventario: e.target.value})}
                   />
                 </div>
 
                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">Detalle (Para QR)</label>
-                   <textarea 
-                     rows={2}
-                     placeholder="ej. Funda azul, arco nuevo..."
-                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                     value={newInstrument.detail}
-                     onChange={e => setNewInstrument({...newInstrument, detail: e.target.value})}
-                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Condición Inicial</label>
-                  <select 
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Número de Serie (Opcional)</label>
+                  <input 
+                    type="text"
+                    placeholder="ej. SN-99382"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={newInstrument.condition}
-                    onChange={e => setNewInstrument({...newInstrument, condition: e.target.value})}
-                  >
-                    <option value="Bueno">Bueno</option>
-                    <option value="Regular">Regular</option>
-                    <option value="Malo">Malo</option>
-                  </select>
+                    value={newInstrument.numeroSerie}
+                    onChange={e => setNewInstrument({...newInstrument, numeroSerie: e.target.value})}
+                  />
                 </div>
 
                 <div className="pt-4 flex gap-3">
                   <button 
                     type="button" 
+                    disabled={isSubmitting}
                     onClick={() => setIsModalOpen(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50"
                   >
                     Cancelar
                   </button>
                   <button 
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-lg shadow-blue-500/30"
+                    disabled={isSubmitting}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-lg shadow-blue-500/30 disabled:opacity-50 flex justify-center items-center gap-2"
                   >
+                    {isSubmitting && <Loader2 size={16} className="animate-spin" />}
                     Guardar
                   </button>
                 </div>

@@ -16,13 +16,24 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      await authService.login(email, password);
-      navigate('/dashboard');
+      const response = await authService.login(email, password);
+      
+      if (response.role === 'student' && response.estudianteId) {
+        navigate(`/estudiantes/${response.estudianteId}`);
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesión');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleStudentQuickLogin = () => {
+    setEmail('estudiante@orquesta.com');
+    setPassword('estudiante123');
+    // We could auto-submit here if we want
   };
 
   return (
@@ -54,7 +65,7 @@ const Login: React.FC = () => {
               Hola de nuevo <span className="inline-block hover:animate-pulse">👋</span>
             </h1>
             <p className="text-lg text-text-secondary">
-              Ingresa tus credenciales para acceder al sistema de la orquesta.
+              Ingresa tus credenciales para acceder al sistema.
             </p>
           </div>
 
@@ -130,16 +141,33 @@ const Login: React.FC = () => {
             </div>
 
             {/* Submit Button */}
-            <button 
-              type="submit"
-              disabled={loading}
-              className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-4 py-3.5 text-base font-bold text-white transition-all hover:bg-blue-600 hover:shadow-[0_0_20px_rgba(43,108,238,0.4)] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              <span className="relative z-10">{loading ? 'Ingresando...' : 'Iniciar Sesión'}</span>
-              {!loading && (
-                <span className="material-symbols-outlined relative z-10 text-[20px] transition-transform group-hover:translate-x-1">arrow_forward</span>
-              )}
-            </button>
+            <div className="flex flex-col gap-4">
+              <button 
+                type="submit"
+                disabled={loading}
+                className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-4 py-3.5 text-base font-bold text-white transition-all hover:bg-blue-600 hover:shadow-[0_0_20px_rgba(43,108,238,0.4)] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                <span className="relative z-10">{loading ? 'Ingresando...' : 'Iniciar Sesión'}</span>
+                {!loading && (
+                  <span className="material-symbols-outlined relative z-10 text-[20px] transition-transform group-hover:translate-x-1">arrow_forward</span>
+                )}
+              </button>
+
+              <div className="relative flex items-center py-2">
+                <div className="flex-grow border-t border-border-dark"></div>
+                <span className="flex-shrink mx-4 text-xs font-medium text-text-secondary uppercase tracking-widest">O</span>
+                <div className="flex-grow border-t border-border-dark"></div>
+              </div>
+
+              <button 
+                type="button"
+                onClick={handleStudentQuickLogin}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-border-dark bg-surface-dark px-4 py-3.5 text-base font-bold text-white transition-all hover:bg-white/5 active:scale-[0.98]"
+              >
+                <span className="material-symbols-outlined text-[20px]">school</span>
+                <span>Ingreso para Estudiantes</span>
+              </button>
+            </div>
           </form>
 
           {/* Footer Sign Up */}

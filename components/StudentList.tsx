@@ -125,14 +125,18 @@ const StudentList: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filteredStudents.map(student => (
-                    <tr key={student.estudianteId} className="hover:bg-blue-50/30 transition">
+                    <tr 
+                      key={student.estudianteId} 
+                      className="hover:bg-blue-50/30 transition group cursor-pointer"
+                      onClick={() => navigate(`/estudiantes/${student.estudianteId}`)}
+                    >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                           <div className="size-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold uppercase">
+                           <div className="size-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold uppercase group-hover:bg-blue-600 group-hover:text-white transition-colors">
                              {(student.nombre || '?')[0]}{(student.apellido || '?')[0]}
                            </div>
                            <div>
-                             <p className="font-bold text-slate-800">{student.nombre} {student.apellido}</p>
+                             <p className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{student.nombre} {student.apellido}</p>
                              <p className="text-xs text-slate-500">{student.email}</p>
                            </div>
                         </div>
@@ -149,14 +153,21 @@ const StudentList: React.FC = () => {
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <button 
-                            onClick={() => navigate(`/estudiantes/${student.estudianteId}`)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/estudiantes/${student.estudianteId}`);
+                            }}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition flex items-center gap-1" 
                             title="Ver Detalle"
                           >
                             <Eye size={18} />
+                            <span className="text-xs font-bold hidden sm:inline">Ver Perfil</span>
                           </button>
                           <button 
-                            onClick={() => handleDelete(student.estudianteId)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(student.estudianteId);
+                            }}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition" 
                             title="Eliminar"
                           >
