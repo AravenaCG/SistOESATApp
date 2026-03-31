@@ -1,9 +1,10 @@
 import { API_AUTH_URL, API_DATA_URL } from '../constants';
 import { AuthResponse } from '../types';
 
+const CONFIGURED_DATA_BASE = import.meta.env.VITE_API_DATA_BASE_URL as string | undefined;
 const API_DATA_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
   ? '/backend'
-  : API_DATA_URL;
+  : (CONFIGURED_DATA_BASE || API_DATA_URL);
 
 type LoginApiResponse = {
   success?: boolean;

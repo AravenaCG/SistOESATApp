@@ -4,9 +4,10 @@ import { API_DATA_URL } from '../constants';
 import { authService } from '../services/api';
 import PublicLayout from './PublicLayout';
 
+const CONFIGURED_DATA_BASE = import.meta.env.VITE_API_DATA_BASE_URL as string | undefined;
 const DATA_API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
   ? '/backend'
-  : API_DATA_URL;
+  : (CONFIGURED_DATA_BASE || API_DATA_URL);
 
 const RegistrationForm: React.FC = () => {
   // Step Control: 'auth' | 'form'
