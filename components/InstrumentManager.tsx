@@ -28,7 +28,7 @@ const InstrumentManager: React.FC = () => {
     try {
       setLoading(true);
       const data = await dataService.getStock();
-      setInventory(data);
+      setInventory(Array.isArray(data) ? data : []);
       setError(null);
     } catch (err: any) {
       setError(err.message || 'Error al cargar el inventario');

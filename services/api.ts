@@ -1,6 +1,32 @@
 import { API_AUTH_URL, API_DATA_URL } from '../constants';
 import { AuthResponse } from '../types';
 
+const API_DATA_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? '/backend'
+  : API_DATA_URL;
+
+type LoginApiResponse = {
+  success?: boolean;
+  succes?: boolean;
+  message?: string;
+  result?: string;
+  token?: string;
+  role?: string;
+  estudianteId?: string;
+};
+
+const decodeJwtPayload = (token: string): Record<string, any> | null => {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+    return JSON.parse(atob(padded));
+  } catch {
+    return null;
+  }
+};
+
 const getAuthHeader = () => {
   const token = localStorage.getItem('accessToken');
   return token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -8,24 +34,39 @@ const getAuthHeader = () => {
 
 export const authService = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
-    // We'll use the local mock login first, then fallback to the real one if needed
-    // or just use the local one for the demo/prototype
-    const response = await fetch('/api/usuario/login', {
+    const response = await fetch(`${API_AUTH_URL}/usuario/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
 
-    if (!response.ok) throw new Error('Credenciales inválidas');
-    const data: AuthResponse = await response.json();
-    
-    if (data.token) {
-      localStorage.setItem('accessToken', data.token);
-      if (data.role) localStorage.setItem('userRole', data.role);
-      if (data.estudianteId) localStorage.setItem('estudianteId', data.estudianteId);
-      return data;
+    if (!response.ok) throw new Error('No se pudo iniciar sesion');
+    const data: LoginApiResponse = await response.json();
+
+    if (data.success === false || data.succes === false) {
+      throw new Error(data.message || 'Credenciales invalidas');
     }
-    throw new Error('No se recibió token');
+
+    const token = data.token || data.result;
+    if (token) {
+      localStorage.setItem('accessToken', token);
+
+      const payload = decodeJwtPayload(token);
+      const tokenRole = payload?.['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+      const parsedRole = (data.role || tokenRole || '').toString().toLowerCase();
+      if (parsedRole) localStorage.setItem('userRole', parsedRole);
+
+      const estudianteId = data.estudianteId || payload?.estudianteId || payload?.EstudianteId;
+      if (estudianteId) localStorage.setItem('estudianteId', estudianteId);
+
+      return {
+        token,
+        role: parsedRole === 'admin' || parsedRole === 'student' ? parsedRole : undefined,
+        estudianteId
+      };
+    }
+
+    throw new Error(data.message || 'No se recibio token');
   },
   
   logout: () => {
@@ -42,10 +83,14 @@ export const authService = {
 export const dataService = {
   // Generic Fetch Wrapper
   request: async (endpoint: string, method: string = 'GET', body?: any) => {
-    const headers = {
-      'Content-Type': 'application/json',
-      ...getAuthHeader()
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
     };
+
+    const authHeader = getAuthHeader();
+    if (authHeader.Authorization) {
+      headers.Authorization = authHeader.Authorization;
+    }
 
     const config: RequestInit = {
       method,
@@ -53,9 +98,8 @@ export const dataService = {
       body: body ? JSON.stringify(body) : undefined
     };
 
-    // If it's a local API call (e.g. /api/stock), use the local server
-    const baseUrl = endpoint.startsWith('/api') ? '' : API_DATA_URL;
-    const response = await fetch(`${baseUrl}${endpoint}`, config);
+    // In dev use local proxy (/backend); in prod call real backend URL.
+    const response = await fetch(`${API_DATA_BASE}${endpoint}`, config);
     
     // Handle Unauthorized
     if (response.status === 401) {
@@ -69,18 +113,46 @@ export const dataService = {
        throw new Error(errText || `Error ${response.status}: ${response.statusText}`);
     }
 
-    // Return json if content exists, otherwise null
+    // Return JSON only when response body looks like JSON.
     const text = await response.text();
-    return text ? JSON.parse(text) : null;
+    if (!text) return null;
+
+    const contentType = response.headers.get('content-type') || '';
+    const looksLikeJson = contentType.toLowerCase().includes('application/json') || /^[\[{]/.test(text.trim());
+    if (!looksLikeJson) {
+      throw new Error('Respuesta no JSON del backend. Reintenta recargando la app.');
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error('No se pudo interpretar la respuesta JSON del backend.');
+    }
   },
 
   // Stock Endpoints
   createStock: (dto: any) => dataService.request('/api/stock', 'POST', dto),
-  getStock: () => dataService.request('/api/stock'),
-  getDisponibles: (instrumentoId: number) => dataService.request(`/api/stock/disponibles/${instrumentoId}`),
+  getStock: () => dataService.request('/api/stock', 'GET'),
+  getDisponibles: (instrumentoId: number) => dataService.request(`/api/stock/disponibles/${instrumentoId}`, 'GET'),
   
   // Loan Endpoints
   asignarPrestamo: (dto: any) => dataService.request('/api/prestamos/asignar', 'POST', dto),
   devolverPrestamo: (dto: any) => dataService.request('/api/prestamos/devolver', 'POST', dto),
-  getPrestamosEstudiante: (estudianteId: string) => dataService.request(`/api/prestamos/estudiante/${estudianteId}`)
+  getPrestamosEstudiante: async (estudianteId: string) => {
+    try {
+      const data = await dataService.request(`/api/prestamos/estudiante/${estudianteId}`, 'GET');
+      return Array.isArray(data) ? data : [];
+    } catch (error: any) {
+      const message = (error?.message || '').toLowerCase();
+      if (
+        message.includes('404') ||
+        message.includes('not found') ||
+        message.includes('no hay prestamos') ||
+        message.includes('sin prestamos')
+      ) {
+        return [];
+      }
+      throw error;
+    }
+  }
 };

@@ -4,6 +4,10 @@ import { API_DATA_URL } from '../constants';
 import { authService } from '../services/api';
 import PublicLayout from './PublicLayout';
 
+const DATA_API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? '/backend'
+  : API_DATA_URL;
+
 const RegistrationForm: React.FC = () => {
   // Step Control: 'auth' | 'form'
   const [step, setStep] = useState<'auth' | 'form'>('auth');
@@ -127,7 +131,7 @@ const RegistrationForm: React.FC = () => {
     const token = localStorage.getItem('accessToken');
 
     try {
-      const response = await fetch(`${API_DATA_URL}/estudiante/save`, {
+      const response = await fetch(`${DATA_API_BASE}/estudiante/save`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

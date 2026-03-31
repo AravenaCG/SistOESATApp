@@ -31,7 +31,7 @@ const StudentProfile: React.FC = () => {
         const [studentData, coursesData, loansData] = await Promise.all([
             dataService.request(`/estudiante/${id}`),
             dataService.request(`/cursosByEstudiante/${id}`).catch(() => []),
-            dataService.getPrestamosEstudiante(id!)
+          dataService.getPrestamosEstudiante(id!).catch(() => [])
         ]);
         
         const courses = Array.isArray(coursesData) ? coursesData : (studentData.cursos || studentData.Cursos || []);
@@ -40,12 +40,14 @@ const StudentProfile: React.FC = () => {
             ...studentData,
             cursos: courses
         });
-        setStudentLoans(loansData);
+        setStudentLoans(Array.isArray(loansData) ? loansData : []);
 
         // Fetch available instruments for this student's instrument type
         if (studentData.instrumentoId) {
-          const stock = await dataService.getDisponibles(studentData.instrumentoId);
-          setAvailableStock(stock);
+          const stock = await dataService.getDisponibles(studentData.instrumentoId).catch(() => []);
+          setAvailableStock(Array.isArray(stock) ? stock : []);
+        } else {
+          setAvailableStock([]);
         }
 
       } catch (error) {
@@ -98,7 +100,12 @@ const StudentProfile: React.FC = () => {
         await fetchStudentData();
         alert('Instrumento devuelto correctamente');
      } catch (e: any) {
-         alert(e.message || 'Error al procesar la devolución');
+        const message = (e?.message || '').toLowerCase();
+        if (message.includes('404') || message.includes('no encontrado') || message.includes('sin devolver')) {
+          alert('Este estudiante no tiene un préstamo activo para devolver.');
+        } else {
+          alert(e.message || 'Error al procesar la devolución');
+        }
      } finally {
          setProcessingLoan(false);
      }
@@ -166,6 +173,8 @@ const StudentProfile: React.FC = () => {
         } else {
           alert('El código escaneado no coincide con el instrumento que tienes en préstamo.');
         }
+      } else {
+        alert('No tienes ningún instrumento en préstamo para devolver.');
       }
     }
   }
@@ -450,6 +459,9 @@ const StudentProfile: React.FC = () => {
                      ) : (
                         /* Case 3: No Active Loan - Show Lend Form */
                         <div className="bg-[#232f48]/50 rounded-xl p-5 border border-white/5 border-dashed">
+                        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-300">
+                          <Check size={14} /> Sin préstamo activo
+                        </div>
                            <h4 className="text-white font-bold mb-3 text-sm">
                               {isStudent ? 'Estado del Instrumento' : 'Asignar Nuevo Préstamo'}
                            </h4>

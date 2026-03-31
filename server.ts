@@ -3,6 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
+import { API_DATA_URL } from './constants';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,6 +14,46 @@ async function startServer() {
 
   app.use(cors());
   app.use(express.json());
+
+  // Same-origin proxy to the real backend to avoid browser CORS issues in local dev.
+  app.use('/backend', async (req, res) => {
+    try {
+      const targetPath = req.originalUrl.replace(/^\/backend/, '');
+      const targetUrl = `${API_DATA_URL}${targetPath}`;
+
+      const proxyHeaders: Record<string, string> = {};
+      const authorization = req.headers.authorization;
+      const contentType = req.headers['content-type'];
+      const accept = req.headers.accept;
+
+      if (typeof authorization === 'string') proxyHeaders['Authorization'] = authorization;
+      if (typeof contentType === 'string') proxyHeaders['Content-Type'] = contentType;
+      if (typeof accept === 'string') proxyHeaders['Accept'] = accept;
+
+      const method = req.method.toUpperCase();
+      const init: RequestInit = {
+        method,
+        headers: proxyHeaders,
+      };
+
+      if (method !== 'GET' && method !== 'HEAD' && req.body && Object.keys(req.body).length > 0) {
+        init.body = JSON.stringify(req.body);
+      }
+
+      const backendResponse = await fetch(targetUrl, init);
+      const responseText = await backendResponse.text();
+      const responseContentType = backendResponse.headers.get('content-type');
+
+      if (responseContentType) {
+        res.setHeader('Content-Type', responseContentType);
+      }
+
+      res.status(backendResponse.status).send(responseText);
+    } catch (error) {
+      console.error('Backend proxy error:', error);
+      res.status(502).send('Error conectando con el backend remoto');
+    }
+  });
 
   // In-memory data for the new features
   let stock: any[] = [];

@@ -18,7 +18,7 @@ const CourseManager: React.FC = () => {
     try {
       setLoading(true);
       const data = await dataService.request('/cursos');
-      setCourses(data || []);
+      setCourses(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -33,7 +33,7 @@ const CourseManager: React.FC = () => {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await dataService.request('/cursos', 'POST', { nombre: newCourseName });
+      await dataService.request('/curso/save', 'POST', { nombre: newCourseName });
       setNewCourseName('');
       fetchCourses(); // Reload
     } catch (e) {
@@ -44,7 +44,7 @@ const CourseManager: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar curso?')) return;
     try {
-      await dataService.request(`/cursos/${id}`, 'DELETE');
+      await dataService.request(`/curso/delete/${id}`, 'DELETE');
       setCourses(prev => prev.filter(c => c.cursoId !== id));
     } catch (e) {
       alert('Error al eliminar curso');

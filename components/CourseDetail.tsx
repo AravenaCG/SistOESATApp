@@ -21,7 +21,8 @@ const CourseDetail: React.FC = () => {
         dataService.request(`/estudiantesByCurso/${id}`).catch(() => [])
       ]);
 
-      const currentCourse = allCourses.find((c: Course) => c.cursoId.toString() === id?.toString());
+      const courseList = Array.isArray(allCourses) ? allCourses : [];
+      const currentCourse = courseList.find((c: Course) => c.cursoId.toString() === id?.toString());
       setCourse(currentCourse || null);
       setStudents(Array.isArray(courseStudents) ? courseStudents : []);
     } catch (error) {
