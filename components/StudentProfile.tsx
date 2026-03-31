@@ -40,7 +40,18 @@ const StudentProfile: React.FC = () => {
             ...studentData,
             cursos: courses
         });
-        setStudentLoans(Array.isArray(loansData) ? loansData : []);
+        const normalizedLoans = (Array.isArray(loansData) ? loansData : []).map((loan: any) => ({
+          prestamoInstrumentoId: loan.prestamoInstrumentoId ?? loan.PrestamoInstrumentoId,
+          fechaPrestamo: loan.fechaPrestamo ?? loan.FechaPrestamo,
+          fechaDevolucion: loan.fechaDevolucion ?? loan.FechaDevolucion ?? null,
+          instrumentoId: loan.instrumentoId ?? loan.InstrumentoId,
+          stockInstrumentoId: loan.stockInstrumentoId ?? loan.StockInstrumentoId,
+          estudianteId: loan.estudianteId ?? loan.EstudianteId,
+          codigoInventario: loan.codigoInventario ?? loan.CodigoInventario,
+          nombreInstrumento: loan.nombreInstrumento ?? loan.NombreInstrumento
+        }));
+
+        setStudentLoans(normalizedLoans);
 
         // Fetch available instruments for this student's instrument type
         if (studentData.instrumentoId) {
@@ -136,12 +147,34 @@ const StudentProfile: React.FC = () => {
     setShowScanner(false);
     setScannerError(null);
 
+    const normalizedDecodedText = decodedText.trim();
+    const normalizeCode = (value: string) => value.trim().toLowerCase();
+
+    let qrStockId: string | undefined;
+    let qrCode: string | undefined;
+    try {
+      const parsed = JSON.parse(normalizedDecodedText);
+      if (parsed && typeof parsed === 'object') {
+        if (parsed.id !== undefined && parsed.id !== null) qrStockId = String(parsed.id);
+        if (parsed.stockInstrumentoId !== undefined && parsed.stockInstrumentoId !== null) qrStockId = String(parsed.stockInstrumentoId);
+        if (parsed.StockInstrumentoId !== undefined && parsed.StockInstrumentoId !== null) qrStockId = String(parsed.StockInstrumentoId);
+
+        if (parsed.code !== undefined && parsed.code !== null) qrCode = String(parsed.code);
+        if (parsed.codigoInventario !== undefined && parsed.codigoInventario !== null) qrCode = String(parsed.codigoInventario);
+        if (parsed.CodigoInventario !== undefined && parsed.CodigoInventario !== null) qrCode = String(parsed.CodigoInventario);
+      }
+    } catch {
+      // QR can also be plain text (id or codigoInventario)
+    }
+
     // decodedText could be stockInstrumentoId or codigoInventario
     if (scannerMode === 'lend') {
       // Find instrument in available stock
       const item = availableStock.find(s => 
-        s.stockInstrumentoId.toString() === decodedText || 
-        s.codigoInventario === decodedText
+        s.stockInstrumentoId.toString() === normalizedDecodedText ||
+        normalizeCode(s.codigoInventario) === normalizeCode(normalizedDecodedText) ||
+        (qrStockId ? s.stockInstrumentoId.toString() === qrStockId : false) ||
+        (qrCode ? normalizeCode(s.codigoInventario) === normalizeCode(qrCode) : false)
       );
 
       if (item) {
@@ -168,7 +201,17 @@ const StudentProfile: React.FC = () => {
       }
     } else if (scannerMode === 'return') {
       if (activeLoan) {
-        if (activeLoan.stockInstrumentoId.toString() === decodedText || activeLoan.codigoInventario === decodedText) {
+        const activeLoanStockId = activeLoan.stockInstrumentoId?.toString();
+        const activeLoanCode = activeLoan.codigoInventario ? normalizeCode(activeLoan.codigoInventario) : '';
+        const decodedCode = normalizeCode(normalizedDecodedText);
+        const qrNormalizedCode = qrCode ? normalizeCode(qrCode) : '';
+
+        if (
+          activeLoanStockId === normalizedDecodedText ||
+          activeLoanCode === decodedCode ||
+          (qrStockId ? activeLoanStockId === qrStockId : false) ||
+          (qrNormalizedCode ? activeLoanCode === qrNormalizedCode : false)
+        ) {
           handleReturnInstrument(activeLoan.stockInstrumentoId, activeLoan.codigoInventario || 'S/C');
         } else {
           alert('El código escaneado no coincide con el instrumento que tienes en préstamo.');
@@ -237,7 +280,16 @@ const StudentProfile: React.FC = () => {
   const currentOrquestaLabel = getOrquestaLabel();
 
   // Find active loan (where fechaDevolucion is null)
-  const activeLoan = studentLoans.find(l => !l.fechaDevolucion);
+  const activeLoan = studentLoans.find((l: any) => {
+    const rawFechaDevolucion = l.fechaDevolucion ?? l.FechaDevolucion;
+    if (rawFechaDevolucion === null || rawFechaDevolucion === undefined) return true;
+    if (typeof rawFechaDevolucion === 'string') {
+      const value = rawFechaDevolucion.trim();
+      if (!value) return true;
+      if (value.startsWith('0001-01-01')) return true;
+    }
+    return false;
+  });
   
   // If no structured loan, but we have a legacy string identifier
   const legacyInstrument = !activeLoan && student.instrumento ? student.instrumento : null;

@@ -141,7 +141,15 @@ export const dataService = {
   getPrestamosEstudiante: async (estudianteId: string) => {
     try {
       const data = await dataService.request(`/api/prestamos/estudiante/${estudianteId}`, 'GET');
-      return Array.isArray(data) ? data : [];
+      if (Array.isArray(data)) return data;
+
+      const wrapped = data as any;
+      if (Array.isArray(wrapped?.result)) return wrapped.result;
+      if (Array.isArray(wrapped?.Result)) return wrapped.Result;
+      if (Array.isArray(wrapped?.data)) return wrapped.data;
+      if (Array.isArray(wrapped?.Data)) return wrapped.Data;
+
+      return [];
     } catch (error: any) {
       const message = (error?.message || '').toLowerCase();
       if (
