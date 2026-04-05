@@ -37,6 +37,30 @@ export interface DevolverPrestamoDto {
   stockInstrumentoId: number;
 }
 
+export interface AttendanceItemDto {
+  estudianteId: string;
+  presente: boolean;
+}
+
+export interface SaveAttendanceDto {
+  cursoId: string;
+  fecha: string;
+  asistencias: AttendanceItemDto[];
+}
+
+export interface AttendanceSessionDto {
+  cursoId: string;
+  fecha: string;
+  asistencias: AttendanceItemDto[];
+}
+
+export interface StudentAttendanceRecordDto {
+  estudianteId: string;
+  cursoId: string;
+  fecha: string;
+  presente: boolean;
+}
+
 export interface InstrumentLoan {
   prestamoInstrumentoId: number;
   fechaPrestamo: string;

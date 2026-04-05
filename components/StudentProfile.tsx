@@ -17,6 +17,7 @@ const StudentProfile: React.FC = () => {
   const [selectedStockId, setSelectedStockId] = useState<string>('');
   const [processingLoan, setProcessingLoan] = useState(false);
   const [studentLoans, setStudentLoans] = useState<any[]>([]);
+  const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
   const [showScanner, setShowScanner] = useState(false);
   const [scannerMode, setScannerMode] = useState<'lend' | 'return' | null>(null);
   const [scannerError, setScannerError] = useState<string | null>(null);
@@ -28,10 +29,11 @@ const StudentProfile: React.FC = () => {
       try {
         setLoading(true);
         
-        const [studentData, coursesData, loansData] = await Promise.all([
+        const [studentData, coursesData, loansData, attendanceData] = await Promise.all([
             dataService.request(`/estudiante/${id}`),
             dataService.request(`/cursosByEstudiante/${id}`).catch(() => []),
-          dataService.getPrestamosEstudiante(id!).catch(() => [])
+            dataService.getPrestamosEstudiante(id!),
+            dataService.getStudentAttendanceHistory(id!).catch(() => [])
         ]);
         
         const courses = Array.isArray(coursesData) ? coursesData : (studentData.cursos || studentData.Cursos || []);
@@ -52,6 +54,7 @@ const StudentProfile: React.FC = () => {
         }));
 
         setStudentLoans(normalizedLoans);
+        setAttendanceHistory(Array.isArray(attendanceData) ? attendanceData : []);
 
         // Fetch available instruments for this student's instrument type
         if (studentData.instrumentoId) {
@@ -158,20 +161,19 @@ const StudentProfile: React.FC = () => {
         if (parsed.id !== undefined && parsed.id !== null) qrStockId = String(parsed.id);
         if (parsed.stockInstrumentoId !== undefined && parsed.stockInstrumentoId !== null) qrStockId = String(parsed.stockInstrumentoId);
         if (parsed.StockInstrumentoId !== undefined && parsed.StockInstrumentoId !== null) qrStockId = String(parsed.StockInstrumentoId);
-
         if (parsed.code !== undefined && parsed.code !== null) qrCode = String(parsed.code);
         if (parsed.codigoInventario !== undefined && parsed.codigoInventario !== null) qrCode = String(parsed.codigoInventario);
         if (parsed.CodigoInventario !== undefined && parsed.CodigoInventario !== null) qrCode = String(parsed.CodigoInventario);
       }
     } catch {
-      // QR can also be plain text (id or codigoInventario)
+      // QR can also be plain text
     }
 
     // decodedText could be stockInstrumentoId or codigoInventario
     if (scannerMode === 'lend') {
       // Find instrument in available stock
       const item = availableStock.find(s => 
-        s.stockInstrumentoId.toString() === normalizedDecodedText ||
+        s.stockInstrumentoId.toString() === normalizedDecodedText || 
         normalizeCode(s.codigoInventario) === normalizeCode(normalizedDecodedText) ||
         (qrStockId ? s.stockInstrumentoId.toString() === qrStockId : false) ||
         (qrCode ? normalizeCode(s.codigoInventario) === normalizeCode(qrCode) : false)
@@ -379,7 +381,11 @@ const StudentProfile: React.FC = () => {
               <div className="glass-panel p-4 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-[#232f48] transition-colors cursor-pointer group">
                  <span className="text-[#92a4c9] text-sm font-medium">Asistencia</span>
                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-white group-hover:text-primary transition-colors">--</span>
+                    <span className="text-3xl font-bold text-white group-hover:text-primary transition-colors">
+                      {attendanceHistory.length > 0 
+                        ? Math.round((attendanceHistory.filter(a => a.presente).length / attendanceHistory.length) * 100)
+                        : '--'}
+                    </span>
                     <span className="text-sm text-primary font-bold">%</span>
                  </div>
               </div>
@@ -443,9 +449,8 @@ const StudentProfile: React.FC = () => {
 
               {/* Right Column (Instrument & Courses) */}
               <div className="flex flex-col gap-6 lg:col-span-2">
-                 
-                 {/* INSTRUMENT LOAN SECTION */}
-                 <div className="bg-card-dark border border-border-dark rounded-xl p-6">
+                      {/* INSTRUMENT LOAN SECTION */}
+                  <div className="bg-card-dark border border-border-dark rounded-xl p-6">
                      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/5">
                         <div className="p-2 bg-orange-500/20 text-orange-400 rounded-lg">
                            <Guitar size={24} />
@@ -563,10 +568,42 @@ const StudentProfile: React.FC = () => {
                            )}
                         </div>
                      )}
-                 </div>
+                  </div>
 
-                 {/* Courses / Repertoire */}
-                 <div className="bg-card-dark border border-border-dark rounded-xl p-6 flex flex-col">
+                  {/* Attendance History */}
+                  <div className="bg-card-dark border border-border-dark rounded-xl p-6 flex flex-col">
+                     <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-white font-bold text-xl">Historial de Asistencia</h3>
+                        <div className="flex items-center gap-2 text-xs font-bold">
+                           <span className="flex items-center gap-1 text-green-400">
+                              <div className="size-2 rounded-full bg-green-400"></div> Presente
+                           </span>
+                           <span className="flex items-center gap-1 text-red-400">
+                              <div className="size-2 rounded-full bg-red-400"></div> Ausente
+                           </span>
+                        </div>
+                     </div>
+                     <div className="flex flex-col gap-3">
+                        {attendanceHistory.length > 0 ? (
+                          [...attendanceHistory].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).map((record, idx) => (
+                             <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-[#232f48]/30 border border-white/5">
+                                <div className="flex items-center gap-3">
+                                   <div className={`size-2 rounded-full ${record.presente ? 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]' : 'bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.5)]'}`}></div>
+                                   <span className="text-white font-medium text-sm">
+                                      {new Date(record.fecha).toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                   </span>
+                                </div>
+                                <span className="text-[#92a4c9] text-xs font-mono">Curso ID: {record.cursoId}</span>
+                             </div>
+                          ))
+                        ) : (
+                          <div className="text-center text-[#92a4c9] py-8 text-sm italic">No hay registros de asistencia todavía</div>
+                        )}
+                     </div>
+                  </div>
+
+                  {/* Courses / Repertoire */}
+                  <div className="bg-card-dark border border-border-dark rounded-xl p-6 flex flex-col">
                     <div className="flex items-center justify-between mb-6">
                        <div>
                           <h3 className="text-white font-bold text-xl">Cursos Inscritos</h3>

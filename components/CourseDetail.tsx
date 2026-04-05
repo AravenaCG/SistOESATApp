@@ -1,30 +1,57 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { dataService } from '../services/api';
-import { Student, Course } from '../types';
 import Layout from './Layout';
-import { ArrowLeft, Users, Mail, Phone, ChevronRight, Hash } from 'lucide-react';
+import { dataService } from '../services/api';
+import { Course, Student, SaveAttendanceDto } from '../types';
+import { 
+  Users, 
+  ArrowLeft, 
+  CheckCircle2, 
+  X, 
+  Save, 
+  Check, 
+  Calendar, 
+  Mail, 
+  Phone, 
+  ChevronRight,
+  Hash
+} from 'lucide-react';
 
 const CourseDetail: React.FC = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [students, setStudents] = useState<Student[]>([]);
   const [course, setCourse] = useState<Course | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAttendanceMode, setIsAttendanceMode] = useState(false);
+  const [attendance, setAttendance] = useState<Record<string, boolean>>({});
+  const [saving, setSaving] = useState(false);
+  const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const today = new Date().toLocaleDateString('es-AR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
 
   const fetchCourseData = async () => {
     try {
       setLoading(true);
       // Intentamos obtener la información del curso y sus alumnos en paralelo
-      const [allCourses, courseStudents] = await Promise.all([
+      const [allCourses, courseStudents, history] = await Promise.all([
         dataService.request('/cursos'),
-        dataService.request(`/estudiantesByCurso/${id}`).catch(() => [])
+        dataService.request(`/estudiantesByCurso/${id}`).catch(() => []),
+        dataService.getAttendance(id!).catch(() => [])
       ]);
 
       const courseList = Array.isArray(allCourses) ? allCourses : [];
       const currentCourse = courseList.find((c: Course) => c.cursoId.toString() === id?.toString());
+      
       setCourse(currentCourse || null);
       setStudents(Array.isArray(courseStudents) ? courseStudents : []);
+      setAttendanceHistory(Array.isArray(history) ? history : []);
     } catch (error) {
       console.error('Error cargando detalle del curso:', error);
     } finally {
@@ -33,14 +60,69 @@ const CourseDetail: React.FC = () => {
   };
 
   useEffect(() => {
-    if (id) fetchCourseData();
+    if (id) {
+      fetchCourseData();
+    }
   }, [id]);
+
+  const toggleAttendance = (studentId: string) => {
+    setAttendance(prev => ({
+      ...prev,
+      [studentId]: !prev[studentId]
+    }));
+  };
+
+  const handleSaveAttendance = async () => {
+    if (!id) return;
+    
+    try {
+      setSaving(true);
+      const attendanceData: SaveAttendanceDto = {
+        cursoId: id,
+        fecha: new Date().toISOString(),
+        asistencias: Object.entries(attendance).map(([estudianteId, presente]) => ({
+          estudianteId,
+          presente
+        }))
+      };
+
+      await dataService.saveAttendance(attendanceData);
+      alert('Asistencia guardada correctamente');
+      setIsAttendanceMode(false);
+      fetchCourseData(); // Refresh history
+    } catch (error) {
+      console.error('Error al guardar asistencia:', error);
+      alert('Error al guardar la asistencia. Por favor, intente nuevamente.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-full py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="size-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!course && !loading) {
+    return (
+      <Layout>
+        <div className="max-w-5xl mx-auto text-center py-20">
+          <div className="bg-slate-50 size-20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <X className="text-slate-300" size={40} />
+          </div>
+          <h2 className="text-2xl font-black text-slate-800 mb-2">Curso no encontrado</h2>
+          <p className="text-slate-500 mb-8">El curso que buscas no existe o no tienes permisos para verlo.</p>
+          <button 
+            onClick={() => navigate('/cursos')}
+            className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all"
+          >
+            Volver a la lista
+          </button>
         </div>
       </Layout>
     );
@@ -75,63 +157,219 @@ const CourseDetail: React.FC = () => {
               <p className="text-slate-500">{course?.descripcion || 'Listado de alumnos inscritos en este curso.'}</p>
             </div>
           </div>
-          <div className="bg-slate-50 px-6 py-3 rounded-xl border border-slate-100 text-center">
-            <span className="block text-2xl font-black text-indigo-600">{students.length}</span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Alumnos Inscritos</span>
-          </div>
-        </div>
-
-        {/* Student List */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 bg-slate-50 border-b border-slate-200">
-            <h3 className="font-bold text-slate-700 flex items-center gap-2">
-              <Users size={18} /> Alumnos del Curso
-            </h3>
-          </div>
-
-          <div className="divide-y divide-slate-100">
-            {students.length === 0 ? (
-              <div className="p-20 text-center">
-                <div className="bg-slate-50 size-16 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
-                  <Users size={32} />
-                </div>
-                <p className="text-slate-500 font-medium">No hay alumnos inscritos en este curso todavía.</p>
-              </div>
-            ) : (
-              students.map((student) => (
-                <div 
-                  key={student.estudianteId} 
-                  className="group p-4 flex flex-col md:flex-row justify-between items-center hover:bg-slate-50 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/estudiantes/${student.estudianteId}`)}
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            <div className="bg-slate-50 px-6 py-3 rounded-xl border border-slate-100 text-center min-w-[120px]">
+              <span className="block text-2xl font-black text-indigo-600">{students.length}</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Alumnos Inscritos</span>
+            </div>
+            {!isAttendanceMode && students.length > 0 && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowHistory(!showHistory)}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all border ${showHistory ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
                 >
-                  <div className="flex items-center gap-4 w-full md:w-auto mb-4 md:mb-0">
-                    <div className="size-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-lg shadow-sm">
-                      {(student.nombre || '?')[0]}{(student.apellido || '?')[0]}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
-                        {student.nombre} {student.apellido}
-                      </h4>
-                      <p className="text-xs text-slate-400 font-mono">{student.documento || student.dni}</p>
-                    </div>
-                  </div>
+                  <Calendar size={20} /> {showHistory ? 'Ver Alumnos' : 'Historial'}
+                </button>
+                <button
+                  onClick={async () => {
+                    const initialAttendance: Record<string, boolean> = {};
+                    students.forEach(s => {
+                      if (s.estudianteId) initialAttendance[s.estudianteId] = false;
+                    });
+                    
+                    // Try to load existing attendance for today
+                    try {
+                      const todayIso = new Date().toISOString().split('T')[0];
+                      const existing = await dataService.getAttendance(id!, todayIso);
+                      if (existing && existing.asistencias) {
+                        existing.asistencias.forEach((a: any) => {
+                          initialAttendance[a.estudianteId] = a.presente;
+                        });
+                      }
+                    } catch (e) {
+                      // 404 is expected if no attendance taken yet
+                      console.log('No hay asistencia previa para hoy');
+                    }
 
-                  <div className="flex flex-wrap items-center gap-6 w-full md:w-auto justify-start md:justify-end">
-                    <div className="flex items-center gap-2 text-slate-500 text-sm">
-                      <Mail size={16} />
-                      <span className="max-w-[150px] truncate">{student.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-500 text-sm">
-                      <Phone size={16} />
-                      <span>{student.telefono || student.celular || '-'}</span>
-                    </div>
-                    <ChevronRight size={20} className="text-slate-300 group-hover:text-indigo-400 transition-transform group-hover:translate-x-1 hidden md:block" />
-                  </div>
-                </div>
-              ))
+                    setAttendance(initialAttendance);
+                    setIsAttendanceMode(true);
+                  }}
+                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-100 active:scale-95"
+                >
+                  <CheckCircle2 size={20} /> Tomar Asistencia
+                </button>
+              </div>
             )}
           </div>
         </div>
+
+        {/* Attendance Header (Only in attendance mode) */}
+        {isAttendanceMode && (
+          <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="flex items-center gap-3 text-indigo-700">
+              <Calendar size={24} />
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider opacity-70">Fecha de Asistencia</p>
+                <p className="text-lg font-black capitalize">{today}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsAttendanceMode(false)}
+                className="flex items-center gap-2 text-slate-500 hover:text-slate-700 font-bold px-4 py-2"
+              >
+                <X size={20} /> Cancelar
+              </button>
+              <button
+                onClick={handleSaveAttendance}
+                disabled={saving}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-emerald-100 active:scale-95"
+              >
+                {saving ? (
+                  <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Save size={20} />
+                )}
+                Guardar Asistencia
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Attendance History Summary (Conditional) */}
+        {!isAttendanceMode && showHistory && (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
+            <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+              <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                <Calendar size={18} /> Historial de Sesiones
+              </h3>
+            </div>
+            <div className="p-6">
+              {attendanceHistory.length === 0 ? (
+                <div className="text-center py-10 text-slate-400 italic">
+                  No hay registros históricos para este curso.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[...attendanceHistory].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).map((session, idx) => {
+                    const presentCount = session.asistencias.filter((a: any) => a.presente).length;
+                    const totalCount = session.asistencias.length;
+                    const percentage = Math.round((presentCount / totalCount) * 100);
+                    
+                    return (
+                      <div key={idx} className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:border-indigo-200 transition-colors">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="font-bold text-slate-800">
+                            {new Date(session.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                          </span>
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase ${percentage > 80 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                            {percentage}% Presencia
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                          <Users size={14} />
+                          <span>{presentCount} presentes de {totalCount}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Student List */}
+        {(!showHistory || isAttendanceMode) && (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+              <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                <Users size={18} /> {isAttendanceMode ? 'Marcar Presentes' : 'Alumnos del Curso'}
+              </h3>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {students.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="bg-slate-50 size-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Users className="text-slate-300" size={32} />
+                  </div>
+                  <h4 className="text-slate-800 font-bold text-lg mb-1">No hay alumnos</h4>
+                  <p className="text-slate-500">Este curso no tiene alumnos inscritos todavía.</p>
+                </div>
+              ) : (
+                students.map((student) => (
+                  <div 
+                    key={student.estudianteId} 
+                    className={`p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-colors group ${isAttendanceMode ? 'hover:bg-indigo-50/30' : 'hover:bg-slate-50'}`}
+                    onClick={() => {
+                      if (!isAttendanceMode) {
+                        navigate(`/estudiantes/${student.estudianteId}`);
+                      }
+                    }}
+                    style={{ cursor: isAttendanceMode ? 'default' : 'pointer' }}
+                  >
+                    <div className="flex items-center gap-4">
+                      {isAttendanceMode ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleAttendance(student.estudianteId!);
+                          }}
+                          className={`size-10 rounded-xl flex items-center justify-center transition-all border-2 ${attendance[student.estudianteId!] ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-100' : 'bg-white border-slate-200 text-slate-300 hover:border-slate-300'}`}
+                        >
+                          {attendance[student.estudianteId!] ? <Check size={24} /> : <div className="size-3 rounded-full bg-slate-200" />}
+                        </button>
+                      ) : (
+                        <div className="size-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center font-black text-lg group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
+                          {student.nombre?.charAt(0) || '?'}
+                        </div>
+                      )}
+                      <div>
+                        <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
+                          {student.nombre} {student.apellido}
+                        </h4>
+                        <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+                           <span className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">DNI: {student.dni}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-6 w-full md:w-auto justify-start md:justify-end">
+                      <div className="flex items-center gap-2 text-slate-500 text-sm">
+                        <Mail size={16} />
+                        <span className="max-w-[150px] truncate">{student.email}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-500 text-sm">
+                        <Phone size={16} />
+                        <span>{student.telefono || student.celular || '-'}</span>
+                      </div>
+                      {!isAttendanceMode && (
+                        <ChevronRight size={20} className="text-slate-300 group-hover:text-indigo-400 transition-transform group-hover:translate-x-1 hidden md:block" />
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            
+            {isAttendanceMode && students.length > 0 && (
+              <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-center">
+                <button
+                  onClick={handleSaveAttendance}
+                  disabled={saving}
+                  className="flex items-center gap-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white px-12 py-4 rounded-2xl font-black text-lg transition-all shadow-xl shadow-emerald-100 active:scale-95"
+                >
+                  {saving ? (
+                    <div className="size-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Save size={24} />
+                  )}
+                  Guardar Asistencia
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </Layout>
   );

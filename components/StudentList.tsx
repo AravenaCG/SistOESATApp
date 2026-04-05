@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { authService, dataService } from '../services/api';
+import { dataService } from '../services/api';
 import { Student } from '../types';
 import { getInstrumentName } from '../constants';
 import * as XLSX from 'xlsx';
@@ -16,16 +16,9 @@ const StudentList: React.FC = () => {
   const fetchStudents = async () => {
     try {
       setLoading(true);
-      const role = authService.getUserRole();
-      const estudianteId = authService.getEstudianteId();
-
-      if (role === 'student' && estudianteId) {
-        const student = await dataService.request(`/estudiante/${estudianteId}`);
-        setStudents(student ? [student] : []);
-      } else {
-        const data = await dataService.request('/estudiantes');
-        setStudents(Array.isArray(data) ? data : []);
-      }
+      const data = await dataService.request('/estudiantes');
+      // Ensure data is array
+      setStudents(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error(error);
       alert('Error cargando estudiantes');

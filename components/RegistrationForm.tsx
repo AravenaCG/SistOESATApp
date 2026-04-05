@@ -1,13 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { API_DATA_URL } from '../constants';
-import { authService } from '../services/api';
+import { authService, dataService } from '../services/api';
 import PublicLayout from './PublicLayout';
-
-const CONFIGURED_DATA_BASE = import.meta.env.VITE_API_DATA_BASE_URL as string | undefined;
-const DATA_API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-  ? '/backend'
-  : (CONFIGURED_DATA_BASE || API_DATA_URL);
 
 const RegistrationForm: React.FC = () => {
   // Step Control: 'auth' | 'form'
@@ -132,42 +127,7 @@ const RegistrationForm: React.FC = () => {
     const token = localStorage.getItem('accessToken');
 
     try {
-      const response = await fetch(`${DATA_API_BASE}/estudiante/save`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-             setStep('auth');
-             throw new Error('Sesión expirada. Por favor inicie sesión nuevamente.');
-        }
-
-        const errText = await response.text();
-        let friendlyError = 'Error al guardar los datos.';
-
-        try {
-          // Attempt to parse the complex JSON error format
-          const errJson = JSON.parse(errText);
-          if (errJson.messages && Array.isArray(errJson.messages)) {
-            // Extract and format messages: "Status: Help"
-            friendlyError = errJson.messages.map((m: any) => {
-               const status = m.status || '';
-               const help = m.help || m.text || '';
-               return status ? `${status}: ${help}` : help;
-            }).filter(Boolean).join('. ');
-          }
-        } catch (e) {
-          // Fallback to raw text if it's a simple string error
-          if (errText) friendlyError = errText;
-        }
-
-        throw new Error(friendlyError);
-      }
+      const response = await dataService.request('/estudiante/save', 'POST', payload);
       
       setSuccess(true);
       setUiMessage({ type: 'success', text: 'Estudiante registrado correctamente.' });

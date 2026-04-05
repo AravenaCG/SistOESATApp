@@ -1,5 +1,5 @@
 import { API_AUTH_URL, API_DATA_URL } from '../constants';
-import { AuthResponse } from '../types';
+import { AuthResponse, SaveAttendanceDto } from '../types';
 
 const CONFIGURED_DATA_BASE = import.meta.env.VITE_API_DATA_BASE_URL as string | undefined;
 const API_DATA_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
@@ -159,6 +159,50 @@ export const dataService = {
         message.includes('no hay prestamos') ||
         message.includes('sin prestamos')
       ) {
+        return [];
+      }
+      throw error;
+    }
+  },
+
+  // Attendance Endpoints
+  saveAttendance: (attendanceData: SaveAttendanceDto) => dataService.request('/api/asistencia', 'POST', attendanceData),
+
+  getAttendance: async (cursoId: string, fecha?: string) => {
+    const query = fecha ? `?cursoId=${encodeURIComponent(cursoId)}&fecha=${encodeURIComponent(fecha)}` : `?cursoId=${encodeURIComponent(cursoId)}`;
+    const data = await dataService.request(`/api/asistencia${query}`, 'GET');
+
+    if (fecha) {
+      if (Array.isArray(data)) return data[0] || null;
+      const wrapped = data as any;
+      if (Array.isArray(wrapped?.result)) return wrapped.result[0] || null;
+      if (Array.isArray(wrapped?.Result)) return wrapped.Result[0] || null;
+      return wrapped?.result || wrapped?.Result || wrapped || null;
+    }
+
+    if (Array.isArray(data)) return data;
+    const wrapped = data as any;
+    if (Array.isArray(wrapped?.result)) return wrapped.result;
+    if (Array.isArray(wrapped?.Result)) return wrapped.Result;
+    if (Array.isArray(wrapped?.data)) return wrapped.data;
+    if (Array.isArray(wrapped?.Data)) return wrapped.Data;
+    return [];
+  },
+
+  getStudentAttendanceHistory: async (estudianteId: string) => {
+    try {
+      const data = await dataService.request(`/api/asistencia/estudiante/${estudianteId}`, 'GET');
+      if (Array.isArray(data)) return data;
+
+      const wrapped = data as any;
+      if (Array.isArray(wrapped?.result)) return wrapped.result;
+      if (Array.isArray(wrapped?.Result)) return wrapped.Result;
+      if (Array.isArray(wrapped?.data)) return wrapped.data;
+      if (Array.isArray(wrapped?.Data)) return wrapped.Data;
+      return [];
+    } catch (error: any) {
+      const message = (error?.message || '').toLowerCase();
+      if (message.includes('404') || message.includes('not found') || message.includes('no hay asistencia')) {
         return [];
       }
       throw error;
