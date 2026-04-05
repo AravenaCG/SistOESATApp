@@ -32,7 +32,7 @@ const StudentProfile: React.FC = () => {
         const [studentData, coursesData, loansData, attendanceData] = await Promise.all([
             dataService.request(`/estudiante/${id}`),
             dataService.request(`/cursosByEstudiante/${id}`).catch(() => []),
-            dataService.getPrestamosEstudiante(id!),
+          dataService.getPrestamosEstudiante(id!).catch(() => []),
             dataService.getStudentAttendanceHistory(id!).catch(() => [])
         ]);
         
@@ -42,7 +42,11 @@ const StudentProfile: React.FC = () => {
             ...studentData,
             cursos: courses
         });
-        const normalizedLoans = (Array.isArray(loansData) ? loansData : []).map((loan: any) => ({
+        const rawLoans = Array.isArray(loansData)
+          ? loansData
+          : (Array.isArray((studentData as any).prestamosInstrumentos) ? (studentData as any).prestamosInstrumentos : []);
+
+        const normalizedLoans = rawLoans.map((loan: any) => ({
           prestamoInstrumentoId: loan.prestamoInstrumentoId ?? loan.PrestamoInstrumentoId,
           fechaPrestamo: loan.fechaPrestamo ?? loan.FechaPrestamo,
           fechaDevolucion: loan.fechaDevolucion ?? loan.FechaDevolucion ?? null,
