@@ -39,19 +39,52 @@ const CourseDetail: React.FC = () => {
   const fetchCourseData = async () => {
     try {
       setLoading(true);
-      // Intentamos obtener la información del curso y sus alumnos en paralelo
-      const [allCourses, courseStudents, history] = await Promise.all([
+      const [allCourses, courseStudentsRaw] = await Promise.all([
         dataService.request('/cursos'),
         dataService.request(`/estudiantesByCurso/${id}`).catch(() => []),
-        dataService.getAttendance(id!).catch(() => [])
       ]);
 
       const courseList = Array.isArray(allCourses) ? allCourses : [];
       const currentCourse = courseList.find((c: Course) => c.cursoId.toString() === id?.toString());
-      
+      const validStudents: Student[] = Array.isArray(courseStudentsRaw) ? courseStudentsRaw : [];
+
       setCourse(currentCourse || null);
-      setStudents(Array.isArray(courseStudents) ? courseStudents : []);
-      setAttendanceHistory(Array.isArray(history) ? history : []);
+      setStudents(validStudents);
+
+      // Build history: fetch each student's attendance and group by date
+      const studentsWithId = validStudents.filter(s => s.estudianteId);
+      if (studentsWithId.length > 0) {
+        const allHistories = await Promise.all(
+          studentsWithId.map(s =>
+            dataService.getStudentAttendanceHistory(s.estudianteId!).catch(() => [])
+          )
+        );
+
+        const sessionMap = new Map<string, { estudianteId: string; presente: boolean }[]>();
+        allHistories.forEach((records, sIdx) => {
+          const student = studentsWithId[sIdx];
+          if (!student?.estudianteId) return;
+          (Array.isArray(records) ? records : []).forEach((record: any) => {
+            const recordCursoId = (record.cursoId ?? record.CursoId ?? '').toString();
+            if (recordCursoId !== id?.toString()) return;
+            const fecha = (record.fecha ?? record.Fecha ?? '').toString().split('T')[0];
+            if (!fecha) return;
+            if (!sessionMap.has(fecha)) sessionMap.set(fecha, []);
+            sessionMap.get(fecha)!.push({
+              estudianteId: student.estudianteId!,
+              presente: !!(record.presente ?? record.Presente ?? false)
+            });
+          });
+        });
+
+        const history = Array.from(sessionMap.entries()).map(([fecha, asistencias]) => ({
+          fecha,
+          asistencias
+        }));
+        setAttendanceHistory(history);
+      } else {
+        setAttendanceHistory([]);
+      }
     } catch (error) {
       console.error('Error cargando detalle del curso:', error);
     } finally {
@@ -254,22 +287,39 @@ const CourseDetail: React.FC = () => {
                   {[...attendanceHistory].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).map((session, idx) => {
                     const presentCount = session.asistencias.filter((a: any) => a.presente).length;
                     const totalCount = session.asistencias.length;
-                    const percentage = Math.round((presentCount / totalCount) * 100);
-                    
+                    const percentage = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
+                    const absentIds = session.asistencias.filter((a: any) => !a.presente).map((a: any) => a.estudianteId);
+                    const absentNames = absentIds.map((eid: string) => {
+                      const s = students.find(st => st.estudianteId === eid);
+                      return s ? `${s.nombre} ${s.apellido}` : null;
+                    }).filter(Boolean);
+
                     return (
                       <div key={idx} className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:border-indigo-200 transition-colors">
                         <div className="flex justify-between items-start mb-2">
                           <span className="font-bold text-slate-800">
-                            {new Date(session.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                            {new Date(session.fecha + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                           </span>
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase ${percentage > 80 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                            {percentage}% Presencia
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase ${percentage >= 80 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                            {percentage}%
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                        <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
                           <Users size={14} />
                           <span>{presentCount} presentes de {totalCount}</span>
                         </div>
+                        {absentNames.length > 0 && (
+                          <div className="mt-2 border-t border-slate-100 pt-2">
+                            <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Ausentes</p>
+                            <ul className="space-y-0.5">
+                              {absentNames.map((name, i) => (
+                                <li key={i} className="text-xs text-slate-500 flex items-center gap-1">
+                                  <X size={10} className="text-red-400 shrink-0" /> {name}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
