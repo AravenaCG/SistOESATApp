@@ -28,6 +28,8 @@ const CourseDetail: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
 
   const today = new Date().toLocaleDateString('es-AR', {
     weekday: 'long',
@@ -51,40 +53,8 @@ const CourseDetail: React.FC = () => {
       setCourse(currentCourse || null);
       setStudents(validStudents);
 
-      // Build history: fetch each student's attendance and group by date
-      const studentsWithId = validStudents.filter(s => s.estudianteId);
-      if (studentsWithId.length > 0) {
-        const allHistories = await Promise.all(
-          studentsWithId.map(s =>
-            dataService.getStudentAttendanceHistory(s.estudianteId!).catch(() => [])
-          )
-        );
-
-        const sessionMap = new Map<string, { estudianteId: string; presente: boolean }[]>();
-        allHistories.forEach((records, sIdx) => {
-          const student = studentsWithId[sIdx];
-          if (!student?.estudianteId) return;
-          (Array.isArray(records) ? records : []).forEach((record: any) => {
-            const recordCursoId = (record.cursoId ?? record.CursoId ?? '').toString();
-            if (recordCursoId !== id?.toString()) return;
-            const fecha = (record.fecha ?? record.Fecha ?? '').toString().split('T')[0];
-            if (!fecha) return;
-            if (!sessionMap.has(fecha)) sessionMap.set(fecha, []);
-            sessionMap.get(fecha)!.push({
-              estudianteId: student.estudianteId!,
-              presente: !!(record.presente ?? record.Presente ?? false)
-            });
-          });
-        });
-
-        const history = Array.from(sessionMap.entries()).map(([fecha, asistencias]) => ({
-          fecha,
-          asistencias
-        }));
-        setAttendanceHistory(history);
-      } else {
-        setAttendanceHistory([]);
-      }
+      // Don't block page load — history is fetched lazily on first Historial click
+      setHistoryLoaded(false);
     } catch (error) {
       console.error('Error cargando detalle del curso:', error);
     } finally {
@@ -97,6 +67,62 @@ const CourseDetail: React.FC = () => {
       fetchCourseData();
     }
   }, [id]);
+
+  const fetchAttendanceHistory = async (studentsSource: Student[]) => {
+    const studentsWithId = studentsSource.filter(s => s.estudianteId);
+    if (studentsWithId.length === 0) {
+      setAttendanceHistory([]);
+      setHistoryLoaded(true);
+      return;
+    }
+    setLoadingHistory(true);
+    try {
+      const allHistories = await Promise.all(
+        studentsWithId.map(s =>
+          dataService.getStudentAttendanceHistory(s.estudianteId!).catch(() => [])
+        )
+      );
+
+      // Detect if backend includes cursoId in records
+      const allRecords = allHistories.flat();
+      const hasCursoIdField = allRecords.some(
+        (r: any) => r.cursoId !== undefined || r.CursoId !== undefined
+      );
+
+      const sessionMap = new Map<string, { estudianteId: string; presente: boolean }[]>();
+      allHistories.forEach((records, sIdx) => {
+        const student = studentsWithId[sIdx];
+        if (!student?.estudianteId) return;
+        (Array.isArray(records) ? records : []).forEach((record: any) => {
+          // Filter by cursoId only if the field exists in the response
+          if (hasCursoIdField) {
+            const recordCursoId = (record.cursoId ?? record.CursoId ?? '').toString();
+            if (recordCursoId && recordCursoId !== id?.toString()) return;
+          }
+          const fecha = (record.fecha ?? record.Fecha ?? '').toString().split('T')[0];
+          if (!fecha) return;
+          if (!sessionMap.has(fecha)) sessionMap.set(fecha, []);
+          sessionMap.get(fecha)!.push({
+            estudianteId: student.estudianteId!,
+            presente: !!(record.presente ?? record.Presente ?? false)
+          });
+        });
+      });
+
+      const history = Array.from(sessionMap.entries()).map(([fecha, asistencias]) => ({
+        fecha,
+        asistencias
+      }));
+      console.log('[CourseDetail] History:', history.length, 'sessions | hasCursoIdField:', hasCursoIdField, '| raw sample:', allRecords[0]);
+      setAttendanceHistory(history);
+    } catch (err) {
+      console.error('[CourseDetail] Error cargando historial:', err);
+      setAttendanceHistory([]);
+    } finally {
+      setLoadingHistory(false);
+      setHistoryLoaded(true);
+    }
+  };
 
   const toggleAttendance = (studentId: string) => {
     setAttendance(prev => ({
@@ -122,7 +148,8 @@ const CourseDetail: React.FC = () => {
       await dataService.saveAttendance(attendanceData);
       alert('Asistencia guardada correctamente');
       setIsAttendanceMode(false);
-      fetchCourseData(); // Refresh history
+      setHistoryLoaded(false);
+      fetchCourseData();
     } catch (error) {
       console.error('Error al guardar asistencia:', error);
       alert('Error al guardar la asistencia. Por favor, intente nuevamente.');
@@ -195,13 +222,21 @@ const CourseDetail: React.FC = () => {
               <span className="block text-2xl font-black text-indigo-600">{students.length}</span>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Alumnos Inscritos</span>
             </div>
-            {!isAttendanceMode && students.length > 0 && (
+            {!isAttendanceMode && (
               <div className="flex gap-2">
                 <button
-                  onClick={() => setShowHistory(!showHistory)}
+                  onClick={async () => {
+                    if (!showHistory && !historyLoaded) {
+                      await fetchAttendanceHistory(students);
+                    }
+                    setShowHistory(prev => !prev);
+                  }}
                   className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all border ${showHistory ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
                 >
-                  <Calendar size={20} /> {showHistory ? 'Ver Alumnos' : 'Historial'}
+                  {loadingHistory
+                    ? <div className="size-5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                    : <Calendar size={20} />}
+                  {showHistory ? 'Ver Alumnos' : 'Historial'}
                 </button>
                 <button
                   onClick={async () => {
@@ -278,9 +313,13 @@ const CourseDetail: React.FC = () => {
               </h3>
             </div>
             <div className="p-6">
-              {attendanceHistory.length === 0 ? (
+              {loadingHistory ? (
+                <div className="flex items-center justify-center py-10">
+                  <div className="size-8 border-4 border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
+                </div>
+              ) : attendanceHistory.length === 0 ? (
                 <div className="text-center py-10 text-slate-400 italic">
-                  No hay registros históricos para este curso.
+                  No hay registros de asistencia para este curso todavía.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
