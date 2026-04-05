@@ -4,7 +4,7 @@ import { dataService, authService } from '../services/api';
 import { Student, InstrumentLoan } from '../types';
 import { getInstrumentName } from '../constants';
 import Layout from './Layout';
-import { Guitar, ArrowRightLeft, Check, AlertCircle, QrCode, X } from 'lucide-react';
+import { Guitar, ArrowRightLeft, Check, AlertCircle, QrCode, X, Plus, Trash2 } from 'lucide-react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 
 const StudentProfile: React.FC = () => {
@@ -18,6 +18,9 @@ const StudentProfile: React.FC = () => {
   const [processingLoan, setProcessingLoan] = useState(false);
   const [studentLoans, setStudentLoans] = useState<any[]>([]);
   const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
+  const [allCourses, setAllCourses] = useState<any[]>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [processingCourseChange, setProcessingCourseChange] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [scannerMode, setScannerMode] = useState<'lend' | 'return' | null>(null);
   const [scannerError, setScannerError] = useState<string | null>(null);
@@ -29,11 +32,12 @@ const StudentProfile: React.FC = () => {
       try {
         setLoading(true);
         
-        const [studentData, coursesData, loansData, attendanceData] = await Promise.all([
+        const [studentData, coursesData, loansData, attendanceData, allCoursesData] = await Promise.all([
             dataService.request(`/estudiante/${id}`),
             dataService.request(`/cursosByEstudiante/${id}`).catch(() => []),
           dataService.getPrestamosEstudiante(id!).catch(() => []),
-            dataService.getStudentAttendanceHistory(id!).catch(() => [])
+          dataService.getStudentAttendanceHistory(id!).catch(() => []),
+          dataService.request('/cursos').catch(() => [])
         ]);
         
         const courses = Array.isArray(coursesData) ? coursesData : (studentData.cursos || studentData.Cursos || []);
@@ -59,6 +63,7 @@ const StudentProfile: React.FC = () => {
 
         setStudentLoans(normalizedLoans);
         setAttendanceHistory(Array.isArray(attendanceData) ? attendanceData : []);
+        setAllCourses(Array.isArray(allCoursesData) ? allCoursesData : []);
 
         // Fetch available instruments for this student's instrument type
         if (studentData.instrumentoId) {
@@ -79,6 +84,39 @@ const StudentProfile: React.FC = () => {
   useEffect(() => {
     if (id) fetchStudentData();
   }, [id]);
+
+  const handleEnrollCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !selectedCourseId) return;
+
+    try {
+      setProcessingCourseChange(true);
+      await dataService.darDeAltaEnCurso(id, Number(selectedCourseId));
+      await fetchStudentData();
+      setSelectedCourseId('');
+      alert('Estudiante dado de alta en el curso correctamente');
+    } catch (error: any) {
+      alert(error?.message || 'Error al dar de alta en el curso');
+    } finally {
+      setProcessingCourseChange(false);
+    }
+  };
+
+  const handleRemoveCourse = async (cursoId: number, courseName: string) => {
+    if (!id) return;
+    if (!confirm(`¿Confirma la baja del curso ${courseName}?`)) return;
+
+    try {
+      setProcessingCourseChange(true);
+      await dataService.darDeBajaDeCurso(id, cursoId);
+      await fetchStudentData();
+      alert('Estudiante dado de baja del curso correctamente');
+    } catch (error: any) {
+      alert(error?.message || 'Error al dar de baja del curso');
+    } finally {
+      setProcessingCourseChange(false);
+    }
+  };
 
   // Handle Lend Instrument
   const handleLendInstrument = async (e: React.FormEvent) => {
@@ -254,6 +292,15 @@ const StudentProfile: React.FC = () => {
 
   // Safe access to courses array with strict typing
   const studentCourses: any[] = student.cursos || (student as any).Cursos || [];
+  const enrolledCourseIds = new Set(
+    studentCourses
+      .map((curso: any) => Number(curso.cursoId ?? curso.CursoId))
+      .filter((cursoId: number) => !Number.isNaN(cursoId))
+  );
+  const availableCoursesToEnroll = allCourses.filter((course: any) => {
+    const courseId = Number(course.cursoId ?? course.CursoId);
+    return !Number.isNaN(courseId) && !enrolledCourseIds.has(courseId);
+  });
 
   const getOrquestaLabel = () => {
      // 1. Check explicit field 'orquesta'
@@ -613,6 +660,42 @@ const StudentProfile: React.FC = () => {
                           <h3 className="text-white font-bold text-xl">Cursos Inscritos</h3>
                        </div>
                     </div>
+
+                    {!isStudent && (
+                      <form onSubmit={handleEnrollCourse} className="mb-5 rounded-xl border border-white/10 bg-[#232f48]/40 p-4">
+                        <p className="mb-3 text-xs font-bold uppercase tracking-wider text-[#92a4c9]">Gestión de cursos (Admin)</p>
+                        <div className="flex flex-col gap-3 sm:flex-row">
+                          <select
+                            className="flex-1 rounded-lg border border-border-dark bg-[#101622] px-4 py-2.5 text-white outline-none focus:ring-1 focus:ring-blue-500"
+                            value={selectedCourseId}
+                            onChange={(e) => setSelectedCourseId(e.target.value)}
+                            disabled={processingCourseChange}
+                          >
+                            <option value="">Seleccione un curso para dar de alta...</option>
+                            {availableCoursesToEnroll.map((course: any) => {
+                              const courseId = course.cursoId ?? course.CursoId;
+                              const courseName = course.nombre ?? course.Nombre;
+                              return (
+                                <option key={courseId} value={String(courseId)}>
+                                  {courseName}
+                                </option>
+                              );
+                            })}
+                          </select>
+                          <button
+                            type="submit"
+                            disabled={!selectedCourseId || processingCourseChange}
+                            className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Plus size={16} /> {processingCourseChange ? 'Procesando...' : 'Dar de Alta'}
+                          </button>
+                        </div>
+                        {availableCoursesToEnroll.length === 0 && (
+                          <p className="mt-2 text-xs text-[#92a4c9]">No hay cursos adicionales disponibles para este estudiante.</p>
+                        )}
+                      </form>
+                    )}
+
                     <div className="flex flex-col gap-4">
                        {studentCourses.length > 0 ? (
                          studentCourses.map((curso: any, idx: number) => (
@@ -626,7 +709,19 @@ const StudentProfile: React.FC = () => {
                                                 <h4 className="text-white font-bold text-sm md:text-base">{curso.nombre || curso.Nombre}</h4>
                                             </div>
                                         </div>
-                                        <span className="text-xs font-bold bg-green-500/20 text-green-400 px-2 py-1 rounded block mb-1">INSCRITO</span>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xs font-bold bg-green-500/20 text-green-400 px-2 py-1 rounded block mb-1">INSCRITO</span>
+                                          {!isStudent && (
+                                            <button
+                                              type="button"
+                                              disabled={processingCourseChange}
+                                              onClick={() => handleRemoveCourse(Number(curso.cursoId ?? curso.CursoId), curso.nombre || curso.Nombre || 'curso')}
+                                              className="flex items-center gap-1 rounded-md border border-red-500/30 bg-red-500/10 px-2 py-1 text-xs font-bold text-red-300 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                              <Trash2 size={14} /> Baja
+                                            </button>
+                                          )}
+                                        </div>
                                     </div>
                                 </div>
                          ))

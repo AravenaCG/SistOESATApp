@@ -131,6 +131,13 @@ export const dataService = {
     }
   },
 
+  // Student-Course Enrollment Endpoints
+  darDeAltaEnCurso: (estudianteId: string, cursoId: number) =>
+    dataService.request(`/estudianteDarDeAltaEnCurso/${estudianteId}/${cursoId}`, 'POST'),
+
+  darDeBajaDeCurso: (estudianteId: string, cursoId: number) =>
+    dataService.request(`/estudianteEliminarCurso/${estudianteId}/${cursoId}`, 'DELETE'),
+
   // Stock Endpoints
   createStock: (dto: any) => dataService.request('/api/stock', 'POST', dto),
   getStock: () => dataService.request('/api/stock', 'GET'),
