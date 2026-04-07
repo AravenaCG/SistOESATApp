@@ -149,6 +149,12 @@ export const dataService = {
   darDeAltaEnCurso: (estudianteId: string, cursoId: number) =>
     dataService.request(`/estudianteDarDeAltaEnCurso/${estudianteId}/${cursoId}`, 'POST'),
 
+  getEstudianteByNombreYDni: (nombre: string, documento: string) =>
+    dataService.request(`/estudianteNombreYDni/${encodeURIComponent(nombre)}/${encodeURIComponent(documento)}`, 'GET'),
+
+  getCursosByEstudiante: (estudianteId: string) =>
+    dataService.request(`/cursosByEstudiante/${estudianteId}`, 'GET'),
+
   darDeBajaDeCurso: (estudianteId: string, cursoId: number) =>
     dataService.request(`/estudianteEliminarCurso/${estudianteId}/${cursoId}`, 'DELETE'),
 

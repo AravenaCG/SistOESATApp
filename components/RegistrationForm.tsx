@@ -159,16 +159,34 @@ const RegistrationForm: React.FC = () => {
 
     try {
       const saveResponse = await dataService.request('/estudiante/save', 'POST', payload);
-      // Backend sometimes returns EstudianteId (PascalCase) and sometimes estudianteId (camelCase).
-      const studentId =
+      const emptyGuid = '00000000-0000-0000-0000-000000000000';
+      const candidateStudentId =
         saveResponse?.Estudiante?.estudianteId ||
         saveResponse?.Estudiante?.EstudianteId ||
         saveResponse?.estudiante?.estudianteId ||
         saveResponse?.estudiante?.EstudianteId;
 
-      if (!studentId) {
-        throw new Error('No se pudo obtener el ID del estudiante creado.');
+      let studentId = candidateStudentId;
+
+      // The save endpoint is returning an empty GUID, so resolve the real student by nombre + documento.
+      if (!studentId || studentId === emptyGuid) {
+        const lookupResponse = await dataService.getEstudianteByNombreYDni(formData.nombre, formData.dni);
+        studentId =
+          lookupResponse?.estudianteId ||
+          lookupResponse?.EstudianteId ||
+          lookupResponse?.id ||
+          lookupResponse?.Id ||
+          lookupResponse?.result?.estudianteId ||
+          lookupResponse?.result?.EstudianteId ||
+          lookupResponse?.value?.estudianteId ||
+          lookupResponse?.value?.EstudianteId;
       }
+
+      if (!studentId || studentId === emptyGuid) {
+        throw new Error('El estudiante se guardó, pero no se pudo recuperar su ID para inscribirlo en los cursos.');
+      }
+
+      let enrollmentWarning: string | null = null;
 
       // Optional course enrollment inferred from orchestra and selected instrument.
       if (formData.orquesta || instrumentoId > 0) {
@@ -241,22 +259,55 @@ const RegistrationForm: React.FC = () => {
             }
           }
 
+          const expectedCourseIds = Array.from(targetCourseIds);
+          if (expectedCourseIds.length === 0) {
+            throw new Error('No se pudieron resolver los cursos a partir de la orquesta/instrumento seleccionados.');
+          }
+
           // Enroll in all target courses using the studentId from backend response.
           // Do not abort all enrollments if one course fails.
-          for (const cursoId of targetCourseIds) {
+          for (const cursoId of expectedCourseIds) {
             try {
-              await dataService.darDeAltaEnCurso(studentId, cursoId);
+              const enrolled = await dataService.darDeAltaEnCurso(studentId, cursoId);
+              if (enrolled === false) {
+                throw new Error(`El backend rechazó la inscripción al curso ${cursoId}.`);
+              }
             } catch (singleEnrollError) {
               console.warn(`No se pudo dar de alta al curso ${cursoId}:`, singleEnrollError);
             }
           }
+
+          const enrolledCoursesResponse = await dataService.getCursosByEstudiante(studentId);
+          const enrolledCourses = Array.isArray(enrolledCoursesResponse)
+            ? enrolledCoursesResponse
+            : (Array.isArray((enrolledCoursesResponse as any)?.value)
+                ? (enrolledCoursesResponse as any).value
+                : (Array.isArray((enrolledCoursesResponse as any)?.result)
+                    ? (enrolledCoursesResponse as any).result
+                    : []));
+
+          const enrolledCourseIds = new Set(
+            enrolledCourses
+              .map((course: any) => Number(course?.cursoId ?? course?.CursoId ?? course?.id ?? 0))
+              .filter((id: number) => Number.isFinite(id) && id > 0)
+          );
+
+          const missingCourseIds = expectedCourseIds.filter((cursoId) => !enrolledCourseIds.has(cursoId));
+          if (missingCourseIds.length > 0) {
+            enrollmentWarning = 'El estudiante se guardó, pero no quedó inscripto correctamente en todos los cursos.';
+          }
         } catch (enrollError) {
           console.warn('Estudiante guardado, pero no se pudo asignar curso automaticamente:', enrollError);
+          enrollmentWarning = 'El estudiante se guardó, pero falló la inscripción automática a los cursos.';
         }
       }
-      
-      setSuccess(true);
-      setUiMessage({ type: 'success', text: 'Estudiante registrado correctamente.' });
+
+      if (enrollmentWarning) {
+        setUiMessage({ type: 'error', text: enrollmentWarning });
+      } else {
+        setSuccess(true);
+        setUiMessage({ type: 'success', text: 'Estudiante registrado correctamente.' });
+      }
     } catch (error: any) {
       console.error(error);
 
