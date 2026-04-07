@@ -11,6 +11,8 @@ const StudentList: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
   const navigate = useNavigate();
 
   const fetchStudents = async () => {
@@ -31,14 +33,42 @@ const StudentList: React.FC = () => {
     fetchStudents();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar este estudiante?')) return;
+  const closeDeleteModal = () => {
+    if (actionLoading) return;
+    setSelectedStudent(null);
+  };
+
+  const handleLogicalDelete = async () => {
+    if (!selectedStudent) return;
     try {
-      await dataService.request(`/estudiante/delete/${id}`, 'DELETE');
-      setStudents(prev => prev.filter(s => s.estudianteId !== id));
+      setActionLoading(true);
+      await dataService.bajaLogicaEstudiante(selectedStudent.estudianteId);
+      setStudents(prev => prev.map((student) => (
+        student.estudianteId === selectedStudent.estudianteId
+          ? { ...student, activo: false }
+          : student
+      )));
+      closeDeleteModal();
     } catch (error) {
       console.error(error);
-      alert('Error eliminando');
+      alert('Error realizando la baja lógica del estudiante.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRealDelete = async () => {
+    if (!selectedStudent) return;
+    try {
+      setActionLoading(true);
+      await dataService.eliminarEstudiante(selectedStudent.estudianteId);
+      setStudents(prev => prev.filter(s => s.estudianteId !== selectedStudent.estudianteId));
+      closeDeleteModal();
+    } catch (error) {
+      console.error(error);
+      alert('Error eliminando el estudiante.');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -138,6 +168,9 @@ const StudentList: React.FC = () => {
                            <div>
                              <p className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{student.nombre} {student.apellido}</p>
                              <p className="text-xs text-slate-500">{student.email}</p>
+                             <p className={`text-xs font-semibold ${student.activo === false ? 'text-red-600' : 'text-green-600'}`}>
+                               {student.activo === false ? 'Inactivo' : 'Activo'}
+                             </p>
                            </div>
                         </div>
                       </td>
@@ -166,10 +199,10 @@ const StudentList: React.FC = () => {
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDelete(student.estudianteId);
+                              setSelectedStudent(student);
                             }}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition" 
-                            title="Eliminar"
+                            title="Opciones de baja"
                           >
                             <Trash2 size={18} />
                           </button>
@@ -185,6 +218,44 @@ const StudentList: React.FC = () => {
             </div>
           )}
         </div>
+
+        {selectedStudent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+              <h3 className="text-xl font-bold text-slate-800">Opciones de baja</h3>
+              <p className="mt-2 text-sm text-slate-600">
+                Selecciona qué hacer con {selectedStudent.nombre} {selectedStudent.apellido}.
+              </p>
+              <div className="mt-6 space-y-3">
+                <button
+                  onClick={handleLogicalDelete}
+                  disabled={actionLoading}
+                  className="w-full rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <span className="block font-bold">Baja lógica</span>
+                  <span className="block text-sm">Marca al estudiante como inactivo usando /estudiante/baja.</span>
+                </button>
+                <button
+                  onClick={handleRealDelete}
+                  disabled={actionLoading}
+                  className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-left text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <span className="block font-bold">Baja real</span>
+                  <span className="block text-sm">Elimina definitivamente al estudiante usando /estudiante/delete.</span>
+                </button>
+              </div>
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={closeDeleteModal}
+                  disabled={actionLoading}
+                  className="rounded-lg px-4 py-2 text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

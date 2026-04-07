@@ -155,6 +155,12 @@ export const dataService = {
   getCursosByEstudiante: (estudianteId: string) =>
     dataService.request(`/cursosByEstudiante/${estudianteId}`, 'GET'),
 
+  bajaLogicaEstudiante: (estudianteId: string) =>
+    dataService.request(`/estudiante/baja/${estudianteId}`, 'DELETE'),
+
+  eliminarEstudiante: (estudianteId: string) =>
+    dataService.request(`/estudiante/delete/${estudianteId}`, 'DELETE'),
+
   darDeBajaDeCurso: (estudianteId: string, cursoId: number) =>
     dataService.request(`/estudianteEliminarCurso/${estudianteId}/${cursoId}`, 'DELETE'),
 
