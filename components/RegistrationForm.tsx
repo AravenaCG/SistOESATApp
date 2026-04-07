@@ -242,7 +242,29 @@ const RegistrationForm: React.FC = () => {
       setUiMessage({ type: 'success', text: 'Estudiante registrado correctamente.' });
     } catch (error: any) {
       console.error(error);
-      setUiMessage({ type: 'error', text: error.message || 'Hubo un error al registrar. Intente nuevamente.' });
+      
+      // Intentar extraer mensaje de error del backend
+      let errorMessage = 'Hubo un error al registrar. Intente nuevamente.';
+      
+      try {
+        // Parse error message - could be JSON string or regular error
+        const errorContent = error?.message || String(error);
+        const errorObj = errorContent.startsWith('{') ? JSON.parse(errorContent) : null;
+        
+        if (errorObj?.messages?.length > 0) {
+          // Backend error with messages array
+          errorMessage = errorObj.messages[0].help || errorObj.messages[0].text || errorMessage;
+        } else if (errorObj?.message) {
+          errorMessage = errorObj.message;
+        } else if (errorContent) {
+          errorMessage = errorContent;
+        }
+      } catch (parseError) {
+        // Si no se puede parsear, usar el mensaje del error original
+        errorMessage = error?.message || String(error) || errorMessage;
+      }
+      
+      setUiMessage({ type: 'error', text: errorMessage });
     } finally {
       setLoading(false);
       submitLockRef.current = false;

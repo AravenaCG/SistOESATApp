@@ -125,8 +125,22 @@ export const dataService = {
     }
 
     try {
-      return JSON.parse(text);
-    } catch {
+      const parsed = JSON.parse(text);
+      
+      // Check if response contains error messages from backend
+      if (parsed?.messages && Array.isArray(parsed.messages)) {
+        const errorMsg = parsed.messages.find((m: any) => m.status === 'Error');
+        if (errorMsg) {
+          throw new Error(JSON.stringify(parsed)); // Pass full response for detailed error handling
+        }
+      }
+      
+      return parsed;
+    } catch (parseError) {
+      if (parseError instanceof Error && parseError.message.startsWith('{')) {
+        // Re-throw backend error with full response
+        throw parseError;
+      }
       throw new Error('No se pudo interpretar la respuesta JSON del backend.');
     }
   },
