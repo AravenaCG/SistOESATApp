@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import { authService, dataService } from '../services/api';
 import PublicLayout from './PublicLayout';
 import { getInstrumentName } from '../constants';
@@ -121,125 +120,122 @@ const RegistrationForm: React.FC = () => {
     setLoading(true);
     setUiMessage(null);
 
-    const estudianteId = uuidv4();
     const instrumentoId = Number(formData.instrumentoId);
-    const instrumentoNombre = instrumentoId > 0 ? getInstrumentName(instrumentoId) : '';
     const tmtMedico = formData.bajoTratamiento ? (formData.tratamientoDetalle || '') : '';
     const epPsicoMotriz = formData.episodiosPsicomotrices ? (formData.episodiosDetalle || '') : '';
     const particularidad = formData.particularidadFisica ? (formData.particularidadDetalle || '') : '';
-    const orquestaLabelMap: Record<string, string> = {
-      'inicial': 'Orquesta Inicial',
-      'juvenil': 'Orquesta Juvenil',
-      'pre-orquesta': 'Pre-Orquesta'
-    };
-    const orquestaLabel = orquestaLabelMap[formData.orquesta] || formData.orquesta;
 
+    // Payload - EXACTO según documentación del backend
     const payload = {
-      ...formData,
-      estudianteId,
-      instrumentoId,
-
-      // Contract that worked in the legacy form
+      nombre: formData.nombre,
+      apellido: formData.apellido,
       documento: formData.dni,
-      telefono: formData.celular,
+      fechaNacimiento: formData.fechaNacimiento,
       direccion: formData.domicilio,
+      nacionalidad: formData.nacionalidad,
+      telefono: formData.celular,
+      email: formData.email,
       nombreTutor: formData.nombreTutor1,
       documentoTutor: formData.dniTutor1,
-      telefonoTutor: formData.celularTutor1,
       nombreTutor2: formData.nombreTutor2,
       documentoTutor2: formData.dniTutor2,
+      telefonoTutor: formData.celularTutor1,
       telefonoTutor2: formData.celularTutor2,
-      orquesta: orquestaLabel,
-      instrumentoNombre,
-      profeCursoViolin: formData.profesorId,
+      instrumentoId: instrumentoId > 0 ? instrumentoId : null,
       activo: true,
       asegurado: false,
-      tmtMedico,
-      epPsicoMotriz,
-      particularidad,
+      'tmtMédico': tmtMedico || null,
+      epPsicoMotriz: epPsicoMotriz || null,
+      particularidad: particularidad || null,
       autoretiro: formData.autorizaRetiro,
-
-      // Compatibility aliases for backend variants
-      EstudianteId: estudianteId,
-      Documento: formData.dni,
-      Telefono: formData.celular,
-      Direccion: formData.domicilio,
-      NombreTutor: formData.nombreTutor1,
-      DocumentoTutor: formData.dniTutor1,
-      TelefonoTutor: formData.celularTutor1,
-      NombreTutor2: formData.nombreTutor2,
-      DocumentoTutor2: formData.dniTutor2,
-      TelefonoTutor2: formData.celularTutor2,
-      Orquesta: orquestaLabel,
-      InstrumentoNombre: instrumentoNombre,
-      ProfeCursoViolin: formData.profesorId,
-      Activo: true,
-      Asegurado: false,
-      TmtMedico: tmtMedico,
-      'TmtMédico': tmtMedico,
-      EpPsicoMotriz: epPsicoMotriz,
-      Particularidad: particularidad,
-      Autoretiro: formData.autorizaRetiro
+      rutaFoto: null
     };
 
     try {
-      await dataService.request('/estudiante/save', 'POST', payload);
+      const saveResponse = await dataService.request('/estudiante/save', 'POST', payload);
+      // Extract studentId from response - it's returned by the backend
+      const studentId = saveResponse?.Estudiante?.estudianteId;
+
+      if (!studentId) {
+        throw new Error('No se pudo obtener el ID del estudiante creado.');
+      }
 
       // Optional course enrollment inferred from orchestra and selected instrument.
-      try {
-        const orchestraToCourseKeyword: Record<string, string> = {
-          'inicial': 'inicial',
-          'juvenil': 'juvenil',
-          'pre-orquesta': 'pre'
-        };
+      if (formData.orquesta || instrumentoId > 0) {
+        try {
+          const normalize = (value: string) =>
+            value
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '');
 
-        const normalize = (value: string) =>
-          value
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '');
+          const courses = await dataService.request('/cursos', 'GET');
+          const wrapped = courses as any;
+          const list = Array.isArray(courses)
+            ? courses
+            : (Array.isArray(wrapped?.value)
+                ? wrapped.value
+                : (Array.isArray(wrapped?.result)
+                    ? wrapped.result
+                    : []));
 
-        const courses = await dataService.request('/cursos', 'GET');
-        const wrapped = courses as any;
-        const list = Array.isArray(courses)
-          ? courses
-          : (Array.isArray(wrapped?.value)
-              ? wrapped.value
-              : (Array.isArray(wrapped?.result)
-                  ? wrapped.result
-                  : []));
+          const targetCourseIds = new Set<number>();
 
-        const targetCourseIds = new Set<number>();
-
-        // 1) Enrollment by orchestra selection
-        const keyword = orchestraToCourseKeyword[formData.orquesta];
-        if (keyword) {
-          const matchedOrquesta = list.find((c: any) =>
-            normalize((c?.nombre || '').toString()).includes(normalize(keyword))
-          );
-          const cursoId = Number(matchedOrquesta?.cursoId);
-          if (Number.isFinite(cursoId) && cursoId > 0) {
-            targetCourseIds.add(cursoId);
+          // 1) Enrollment by orchestra selection (inicial, juvenil, pre-orquesta)
+          if (formData.orquesta) {
+            const orchestraToCourseKeyword: Record<string, string> = {
+              'inicial': 'inicial',
+              'juvenil': 'juvenil',
+              'pre-orquesta': 'pre'
+            };
+            const keyword = orchestraToCourseKeyword[formData.orquesta];
+            if (keyword) {
+              const matchedOrquesta = list.find((c: any) =>
+                normalize((c?.nombre || '').toString()).includes(normalize(keyword))
+              );
+              const cursoId = Number(matchedOrquesta?.cursoId);
+              if (Number.isFinite(cursoId) && cursoId > 0) {
+                targetCourseIds.add(cursoId);
+              }
+            }
           }
-        }
 
-        // 2) Enrollment by instrument selection (only if the student selected one)
-        if (instrumentoId > 0 && instrumentoNombre) {
-          const instrumentNameNorm = normalize(instrumentoNombre);
-          const matchedInstrument = list.find((c: any) =>
-            normalize((c?.nombre || '').toString()) === instrumentNameNorm
-          );
-          const instrumentCourseId = Number(matchedInstrument?.cursoId);
-          if (Number.isFinite(instrumentCourseId) && instrumentCourseId > 0) {
-            targetCourseIds.add(instrumentCourseId);
+          // 2) Enrollment by instrument selection (with professor if applicable)
+          if (instrumentoId > 0) {
+            const instrumentName = getInstrumentName(instrumentoId);
+            
+            // If a professor course is selected (only for Violin), search for it directly by name
+            if (formData.profesorId && instrumentoId === 1) {
+              const courseSearchNameNorm = normalize(formData.profesorId);
+              const matchedProfessorCourse = list.find((c: any) =>
+                normalize((c?.nombre || '').toString()) === courseSearchNameNorm
+              );
+              if (matchedProfessorCourse) {
+                const professorCourseId = Number(matchedProfessorCourse?.cursoId);
+                if (Number.isFinite(professorCourseId) && professorCourseId > 0) {
+                  targetCourseIds.add(professorCourseId);
+                }
+              }
+            } else {
+              // If no professor selected, search for instrument course only
+              const instrumentNameNorm = normalize(instrumentName);
+              const matchedInstrument = list.find((c: any) =>
+                normalize((c?.nombre || '').toString()) === instrumentNameNorm
+              );
+              const instrumentCourseId = Number(matchedInstrument?.cursoId);
+              if (Number.isFinite(instrumentCourseId) && instrumentCourseId > 0) {
+                targetCourseIds.add(instrumentCourseId);
+              }
+            }
           }
-        }
 
-        for (const cursoId of targetCourseIds) {
-          await dataService.darDeAltaEnCurso(estudianteId, cursoId);
+          // Enroll in all target courses using the studentId from backend response
+          for (const cursoId of targetCourseIds) {
+            await dataService.darDeAltaEnCurso(studentId, cursoId);
+          }
+        } catch (enrollError) {
+          console.warn('Estudiante guardado, pero no se pudo asignar curso automaticamente:', enrollError);
         }
-      } catch (enrollError) {
-        console.warn('Estudiante guardado, pero no se pudo asignar curso automaticamente:', enrollError);
       }
       
       setSuccess(true);
@@ -467,8 +463,9 @@ const RegistrationForm: React.FC = () => {
                 value={formData.profesorId}
               >
                 <option value="">Profesor (Solo Violín)</option>
-                <option value="P1">Prof. García</option>
-                <option value="P2">Prof. Martínez</option>
+                <option value="Violin Pablo">Violin Pablo</option>
+                <option value="Violin Tamara">Violin Tamara</option>
+                <option value="Violin Carolina">Violin Carolina</option>
               </select>
             </div>
           </section>
