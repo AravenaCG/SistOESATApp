@@ -116,6 +116,12 @@ const RegistrationForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitLockRef.current) return;
+
+    if (Number(formData.instrumentoId) === 1 && !formData.profesorId) {
+      setUiMessage({ type: 'error', text: 'Para Violín debe seleccionar un curso de profesor (Violin Pablo, Violin Tamara o Violin Carolina).' });
+      return;
+    }
+
     submitLockRef.current = true;
     setLoading(true);
     setUiMessage(null);
@@ -153,8 +159,12 @@ const RegistrationForm: React.FC = () => {
 
     try {
       const saveResponse = await dataService.request('/estudiante/save', 'POST', payload);
-      // Extract studentId from response - it's returned by the backend
-      const studentId = saveResponse?.Estudiante?.estudianteId;
+      // Backend sometimes returns EstudianteId (PascalCase) and sometimes estudianteId (camelCase).
+      const studentId =
+        saveResponse?.Estudiante?.estudianteId ||
+        saveResponse?.Estudiante?.EstudianteId ||
+        saveResponse?.estudiante?.estudianteId ||
+        saveResponse?.estudiante?.EstudianteId;
 
       if (!studentId) {
         throw new Error('No se pudo obtener el ID del estudiante creado.');
@@ -167,7 +177,26 @@ const RegistrationForm: React.FC = () => {
             value
               .toLowerCase()
               .normalize('NFD')
-              .replace(/[\u0300-\u036f]/g, '');
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/\s+/g, ' ')
+              .trim();
+
+          const getCourseId = (course: any): number => {
+            const id = Number(course?.cursoId ?? course?.CursoId ?? course?.id ?? 0);
+            return Number.isFinite(id) ? id : 0;
+          };
+
+          const findCourseByExactName = (courses: any[], name: string): number => {
+            const target = normalize(name);
+            const exact = courses.find((c: any) => normalize((c?.nombre || '').toString()) === target);
+            return exact ? getCourseId(exact) : 0;
+          };
+
+          const findCourseByKeyword = (courses: any[], keyword: string): number => {
+            const target = normalize(keyword);
+            const found = courses.find((c: any) => normalize((c?.nombre || '').toString()).includes(target));
+            return found ? getCourseId(found) : 0;
+          };
 
           const courses = await dataService.request('/cursos', 'GET');
           const wrapped = courses as any;
@@ -183,20 +212,17 @@ const RegistrationForm: React.FC = () => {
 
           // 1) Enrollment by orchestra selection (inicial, juvenil, pre-orquesta)
           if (formData.orquesta) {
-            const orchestraToCourseKeyword: Record<string, string> = {
-              'inicial': 'inicial',
-              'juvenil': 'juvenil',
-              'pre-orquesta': 'pre'
+            const orchestraToCourseName: Record<string, string> = {
+              'inicial': 'Orquesta Inicial',
+              'juvenil': 'Orquesta Juvenil',
+              'pre-orquesta': 'Pre-Orquesta'
             };
-            const keyword = orchestraToCourseKeyword[formData.orquesta];
-            if (keyword) {
-              const matchedOrquesta = list.find((c: any) =>
-                normalize((c?.nombre || '').toString()).includes(normalize(keyword))
-              );
-              const cursoId = Number(matchedOrquesta?.cursoId);
-              if (Number.isFinite(cursoId) && cursoId > 0) {
-                targetCourseIds.add(cursoId);
-              }
+            const orchestraName = orchestraToCourseName[formData.orquesta];
+            if (orchestraName) {
+              const byExact = findCourseByExactName(list, orchestraName);
+              const byKeyword = findCourseByKeyword(list, formData.orquesta);
+              const cursoId = byExact || byKeyword;
+              if (cursoId > 0) targetCourseIds.add(cursoId);
             }
           }
 
@@ -206,32 +232,23 @@ const RegistrationForm: React.FC = () => {
             
             // If a professor course is selected (only for Violin), search for it directly by name
             if (formData.profesorId && instrumentoId === 1) {
-              const courseSearchNameNorm = normalize(formData.profesorId);
-              const matchedProfessorCourse = list.find((c: any) =>
-                normalize((c?.nombre || '').toString()) === courseSearchNameNorm
-              );
-              if (matchedProfessorCourse) {
-                const professorCourseId = Number(matchedProfessorCourse?.cursoId);
-                if (Number.isFinite(professorCourseId) && professorCourseId > 0) {
-                  targetCourseIds.add(professorCourseId);
-                }
-              }
+              const professorCourseId = findCourseByExactName(list, formData.profesorId) || findCourseByKeyword(list, formData.profesorId);
+              if (professorCourseId > 0) targetCourseIds.add(professorCourseId);
             } else {
               // If no professor selected, search for instrument course only
-              const instrumentNameNorm = normalize(instrumentName);
-              const matchedInstrument = list.find((c: any) =>
-                normalize((c?.nombre || '').toString()) === instrumentNameNorm
-              );
-              const instrumentCourseId = Number(matchedInstrument?.cursoId);
-              if (Number.isFinite(instrumentCourseId) && instrumentCourseId > 0) {
-                targetCourseIds.add(instrumentCourseId);
-              }
+              const instrumentCourseId = findCourseByExactName(list, instrumentName) || findCourseByKeyword(list, instrumentName);
+              if (instrumentCourseId > 0) targetCourseIds.add(instrumentCourseId);
             }
           }
 
-          // Enroll in all target courses using the studentId from backend response
+          // Enroll in all target courses using the studentId from backend response.
+          // Do not abort all enrollments if one course fails.
           for (const cursoId of targetCourseIds) {
-            await dataService.darDeAltaEnCurso(studentId, cursoId);
+            try {
+              await dataService.darDeAltaEnCurso(studentId, cursoId);
+            } catch (singleEnrollError) {
+              console.warn(`No se pudo dar de alta al curso ${cursoId}:`, singleEnrollError);
+            }
           }
         } catch (enrollError) {
           console.warn('Estudiante guardado, pero no se pudo asignar curso automaticamente:', enrollError);
@@ -242,29 +259,34 @@ const RegistrationForm: React.FC = () => {
       setUiMessage({ type: 'success', text: 'Estudiante registrado correctamente.' });
     } catch (error: any) {
       console.error(error);
-      
-      // Intentar extraer mensaje de error del backend
-      let errorMessage = 'Hubo un error al registrar. Intente nuevamente.';
-      
-      try {
-        // Parse error message - could be JSON string or regular error
-        const errorContent = error?.message || String(error);
-        const errorObj = errorContent.startsWith('{') ? JSON.parse(errorContent) : null;
-        
-        if (errorObj?.messages?.length > 0) {
-          // Backend error with messages array
-          errorMessage = errorObj.messages[0].help || errorObj.messages[0].text || errorMessage;
-        } else if (errorObj?.message) {
-          errorMessage = errorObj.message;
-        } else if (errorContent) {
-          errorMessage = errorContent;
+
+      const extractBackendMessage = (raw: string): string | null => {
+        if (!raw) return null;
+
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed?.messages) && parsed.messages.length > 0) {
+            const first = parsed.messages[0];
+            return first?.help || first?.text || null;
+          }
+          return parsed?.message || null;
+        } catch {
+          // Fallback for non-JSON strings coming from backend logs/text.
+          const helpMatch = raw.match(/"help"\s*:\s*"([^"]+)"/i) || raw.match(/'help'\s*:\s*'([^']+)'/i);
+          if (helpMatch?.[1]) return helpMatch[1];
+
+          // Avoid dumping a full payload JSON in the UI.
+          if (raw.includes('Estudiante') && raw.includes('messages')) {
+            return 'Ocurrió un error al registrar. Revise los datos e intente nuevamente.';
+          }
+          return null;
         }
-      } catch (parseError) {
-        // Si no se puede parsear, usar el mensaje del error original
-        errorMessage = error?.message || String(error) || errorMessage;
-      }
-      
-      setUiMessage({ type: 'error', text: errorMessage });
+      };
+
+      const rawError = error?.message || String(error) || '';
+      const backendMsg = extractBackendMessage(rawError);
+      const fallbackMsg = 'Hubo un error al registrar. Intente nuevamente.';
+      setUiMessage({ type: 'error', text: backendMsg || fallbackMsg });
     } finally {
       setLoading(false);
       submitLockRef.current = false;
@@ -481,6 +503,7 @@ const RegistrationForm: React.FC = () => {
                 name="profesorId" 
                 className="input-std"
                 disabled={!showProfessor}
+                required={showProfessor}
                 onChange={handleChange}
                 value={formData.profesorId}
               >
