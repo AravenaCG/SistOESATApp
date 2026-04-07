@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { API_DATA_URL } from '../constants';
 import { authService, dataService } from '../services/api';
 import PublicLayout from './PublicLayout';
 
 const RegistrationForm: React.FC = () => {
+  const submitLockRef = useRef(false);
   // Step Control: 'auth' | 'form'
   const [step, setStep] = useState<'auth' | 'form'>('auth');
   
@@ -115,19 +115,34 @@ const RegistrationForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
     setLoading(true);
     setUiMessage(null);
 
     const payload = {
       ...formData,
       estudianteId: uuidv4(), // Generate ID here
-      instrumentoId: Number(formData.instrumentoId) // Ensure number
+      instrumentoId: Number(formData.instrumentoId), // Ensure number
+
+      // Backend canonical fields
+      activo: 1,
+      documento: formData.dni,
+      telefono: formData.celular,
+      direccion: formData.domicilio,
+      nombreTutor: formData.nombreTutor1,
+      documentoTutor: formData.dniTutor1,
+      telefonoTutor: formData.celularTutor1,
+      documentoTutor2: formData.dniTutor2,
+      telefonoTutor2: formData.celularTutor2,
+      tmtMedico: formData.bajoTratamiento ? (formData.tratamientoDetalle || 'SI') : 'NO',
+      epPsicoMotriz: formData.episodiosPsicomotrices ? (formData.episodiosDetalle || 'SI') : 'NO',
+      particularidad: formData.particularidadFisica ? (formData.particularidadDetalle || 'SI') : 'NO',
+      autoretiro: formData.autorizaRetiro
     };
 
-    const token = localStorage.getItem('accessToken');
-
     try {
-      const response = await dataService.request('/estudiante/save', 'POST', payload);
+      await dataService.request('/estudiante/save', 'POST', payload);
       
       setSuccess(true);
       setUiMessage({ type: 'success', text: 'Estudiante registrado correctamente.' });
@@ -136,6 +151,7 @@ const RegistrationForm: React.FC = () => {
       setUiMessage({ type: 'error', text: error.message || 'Hubo un error al registrar. Intente nuevamente.' });
     } finally {
       setLoading(false);
+      submitLockRef.current = false;
     }
   };
 
