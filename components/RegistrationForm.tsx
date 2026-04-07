@@ -183,7 +183,7 @@ const RegistrationForm: React.FC = () => {
     };
 
     try {
-      await dataService.request('/estudiante/save', 'POST', { estudiante: payload });
+      await dataService.request('/estudiante/save', 'POST', payload);
 
       // Optional course enrollment inferred from orchestra and selected instrument.
       try {
