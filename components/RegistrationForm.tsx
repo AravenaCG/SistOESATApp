@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { authService, dataService } from '../services/api';
 import PublicLayout from './PublicLayout';
+import { getInstrumentName } from '../constants';
 
 const RegistrationForm: React.FC = () => {
   const submitLockRef = useRef(false);
@@ -120,29 +121,91 @@ const RegistrationForm: React.FC = () => {
     setLoading(true);
     setUiMessage(null);
 
+    const estudianteId = uuidv4();
+    const instrumentoId = Number(formData.instrumentoId);
+    const instrumentoNombre = instrumentoId > 0 ? getInstrumentName(instrumentoId) : '';
+    const tmtMedico = formData.bajoTratamiento ? (formData.tratamientoDetalle || '') : '';
+    const epPsicoMotriz = formData.episodiosPsicomotrices ? (formData.episodiosDetalle || '') : '';
+    const particularidad = formData.particularidadFisica ? (formData.particularidadDetalle || '') : '';
+    const orquestaLabelMap: Record<string, string> = {
+      'inicial': 'Orquesta Inicial',
+      'juvenil': 'Orquesta Juvenil',
+      'pre-orquesta': 'Pre-Orquesta'
+    };
+    const orquestaLabel = orquestaLabelMap[formData.orquesta] || formData.orquesta;
+
     const payload = {
       ...formData,
-      estudianteId: uuidv4(), // Generate ID here
-      instrumentoId: Number(formData.instrumentoId), // Ensure number
+      estudianteId,
+      instrumentoId,
 
-      // Backend canonical fields
-      activo: 1,
+      // Contract that worked in the legacy form
       documento: formData.dni,
       telefono: formData.celular,
       direccion: formData.domicilio,
       nombreTutor: formData.nombreTutor1,
       documentoTutor: formData.dniTutor1,
       telefonoTutor: formData.celularTutor1,
+      nombreTutor2: formData.nombreTutor2,
       documentoTutor2: formData.dniTutor2,
       telefonoTutor2: formData.celularTutor2,
-      tmtMedico: formData.bajoTratamiento ? (formData.tratamientoDetalle || 'SI') : 'NO',
-      epPsicoMotriz: formData.episodiosPsicomotrices ? (formData.episodiosDetalle || 'SI') : 'NO',
-      particularidad: formData.particularidadFisica ? (formData.particularidadDetalle || 'SI') : 'NO',
-      autoretiro: formData.autorizaRetiro
+      orquesta: orquestaLabel,
+      instrumentoNombre,
+      profeCursoViolin: formData.profesorId,
+      activo: true,
+      asegurado: false,
+      tmtMedico,
+      epPsicoMotriz,
+      particularidad,
+      autoretiro: formData.autorizaRetiro,
+
+      // Compatibility aliases for backend variants
+      EstudianteId: estudianteId,
+      Documento: formData.dni,
+      Telefono: formData.celular,
+      Direccion: formData.domicilio,
+      NombreTutor: formData.nombreTutor1,
+      DocumentoTutor: formData.dniTutor1,
+      TelefonoTutor: formData.celularTutor1,
+      NombreTutor2: formData.nombreTutor2,
+      DocumentoTutor2: formData.dniTutor2,
+      TelefonoTutor2: formData.celularTutor2,
+      Orquesta: orquestaLabel,
+      InstrumentoNombre: instrumentoNombre,
+      ProfeCursoViolin: formData.profesorId,
+      Activo: true,
+      Asegurado: false,
+      TmtMedico: tmtMedico,
+      'TmtMédico': tmtMedico,
+      EpPsicoMotriz: epPsicoMotriz,
+      Particularidad: particularidad,
+      Autoretiro: formData.autorizaRetiro
     };
 
     try {
       await dataService.request('/estudiante/save', 'POST', payload);
+
+      // Optional course enrollment inferred from selected orchestra name.
+      try {
+        const orchestraToCourseKeyword: Record<string, string> = {
+          'inicial': 'inicial',
+          'juvenil': 'juvenil',
+          'pre-orquesta': 'pre'
+        };
+
+        const keyword = orchestraToCourseKeyword[formData.orquesta];
+        if (keyword) {
+          const courses = await dataService.request('/cursos', 'GET');
+          const list = Array.isArray(courses) ? courses : [];
+          const matched = list.find((c: any) => (c?.nombre || '').toString().toLowerCase().includes(keyword));
+          const cursoId = Number(matched?.cursoId);
+          if (Number.isFinite(cursoId) && cursoId > 0) {
+            await dataService.darDeAltaEnCurso(estudianteId, cursoId);
+          }
+        }
+      } catch (enrollError) {
+        console.warn('Estudiante guardado, pero no se pudo asignar curso automaticamente:', enrollError);
+      }
       
       setSuccess(true);
       setUiMessage({ type: 'success', text: 'Estudiante registrado correctamente.' });
