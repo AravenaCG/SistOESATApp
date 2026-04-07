@@ -185,7 +185,7 @@ const RegistrationForm: React.FC = () => {
     try {
       await dataService.request('/estudiante/save', 'POST', { estudiante: payload });
 
-      // Optional course enrollment inferred from selected orchestra name.
+      // Optional course enrollment inferred from orchestra and selected instrument.
       try {
         const orchestraToCourseKeyword: Record<string, string> = {
           'inicial': 'inicial',
@@ -193,15 +193,50 @@ const RegistrationForm: React.FC = () => {
           'pre-orquesta': 'pre'
         };
 
+        const normalize = (value: string) =>
+          value
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
+        const courses = await dataService.request('/cursos', 'GET');
+        const wrapped = courses as any;
+        const list = Array.isArray(courses)
+          ? courses
+          : (Array.isArray(wrapped?.value)
+              ? wrapped.value
+              : (Array.isArray(wrapped?.result)
+                  ? wrapped.result
+                  : []));
+
+        const targetCourseIds = new Set<number>();
+
+        // 1) Enrollment by orchestra selection
         const keyword = orchestraToCourseKeyword[formData.orquesta];
         if (keyword) {
-          const courses = await dataService.request('/cursos', 'GET');
-          const list = Array.isArray(courses) ? courses : [];
-          const matched = list.find((c: any) => (c?.nombre || '').toString().toLowerCase().includes(keyword));
-          const cursoId = Number(matched?.cursoId);
+          const matchedOrquesta = list.find((c: any) =>
+            normalize((c?.nombre || '').toString()).includes(normalize(keyword))
+          );
+          const cursoId = Number(matchedOrquesta?.cursoId);
           if (Number.isFinite(cursoId) && cursoId > 0) {
-            await dataService.darDeAltaEnCurso(estudianteId, cursoId);
+            targetCourseIds.add(cursoId);
           }
+        }
+
+        // 2) Enrollment by instrument selection (only if the student selected one)
+        if (instrumentoId > 0 && instrumentoNombre) {
+          const instrumentNameNorm = normalize(instrumentoNombre);
+          const matchedInstrument = list.find((c: any) =>
+            normalize((c?.nombre || '').toString()) === instrumentNameNorm
+          );
+          const instrumentCourseId = Number(matchedInstrument?.cursoId);
+          if (Number.isFinite(instrumentCourseId) && instrumentCourseId > 0) {
+            targetCourseIds.add(instrumentCourseId);
+          }
+        }
+
+        for (const cursoId of targetCourseIds) {
+          await dataService.darDeAltaEnCurso(estudianteId, cursoId);
         }
       } catch (enrollError) {
         console.warn('Estudiante guardado, pero no se pudo asignar curso automaticamente:', enrollError);
