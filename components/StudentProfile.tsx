@@ -289,21 +289,25 @@ const StudentProfile: React.FC = () => {
         alert('Instrumento no encontrado o no disponible para préstamo.');
       }
     } else if (scannerMode === 'return') {
-      if (activeLoan) {
-        const activeLoanStockId = activeLoan.stockInstrumentoId?.toString();
-        const activeLoanCode = activeLoan.codigoInventario ? normalizeCode(activeLoan.codigoInventario) : '';
+      if (activeLoans.length > 0) {
         const decodedCode = normalizeCode(normalizedDecodedText);
         const qrNormalizedCode = qrCode ? normalizeCode(qrCode) : '';
 
-        if (
-          activeLoanStockId === normalizedDecodedText ||
-          activeLoanCode === decodedCode ||
-          (qrStockId ? activeLoanStockId === qrStockId : false) ||
-          (qrNormalizedCode ? activeLoanCode === qrNormalizedCode : false)
-        ) {
-          handleReturnInstrument(activeLoan.stockInstrumentoId, activeLoan.codigoInventario || 'S/C');
+        const matchedLoan = activeLoans.find((loan: any) => {
+          const loanStockId = loan.stockInstrumentoId?.toString();
+          const loanCode = loan.codigoInventario ? normalizeCode(loan.codigoInventario) : '';
+          return (
+            loanStockId === normalizedDecodedText ||
+            loanCode === decodedCode ||
+            (qrStockId ? loanStockId === qrStockId : false) ||
+            (qrNormalizedCode ? loanCode === qrNormalizedCode : false)
+          );
+        });
+
+        if (matchedLoan) {
+          handleReturnInstrument(matchedLoan.stockInstrumentoId, matchedLoan.codigoInventario || 'S/C');
         } else {
-          alert('El código escaneado no coincide con el instrumento que tienes en préstamo.');
+          alert('El código escaneado no coincide con ninguno de los instrumentos en préstamo activo.');
         }
       } else {
         alert('No tienes ningún instrumento en préstamo para devolver.');
@@ -377,8 +381,8 @@ const StudentProfile: React.FC = () => {
 
   const currentOrquestaLabel = getOrquestaLabel();
 
-  // Find active loan (where fechaDevolucion is null)
-  const activeLoan = studentLoans.find((l: any) => {
+  // Find active loans (where fechaDevolucion is null)
+  const activeLoans = studentLoans.filter((l: any) => {
     const rawFechaDevolucion = l.fechaDevolucion ?? l.FechaDevolucion;
     if (rawFechaDevolucion === null || rawFechaDevolucion === undefined) return true;
     if (typeof rawFechaDevolucion === 'string') {
@@ -390,7 +394,7 @@ const StudentProfile: React.FC = () => {
   });
   
   // If no structured loan, but we have a legacy string identifier
-  const legacyInstrument = !activeLoan && student.instrumento ? student.instrumento : null;
+  const legacyInstrument = activeLoans.length === 0 && student.instrumento ? student.instrumento : null;
 
   return (
     <Layout>
@@ -565,43 +569,49 @@ const StudentProfile: React.FC = () => {
                         </div>
                      </div>
 
-                     {activeLoan ? (
-                        /* Case 1: Has Active Loan */
-                        <div className="bg-[#232f48] rounded-xl p-5 border border-orange-500/30 relative overflow-hidden">
-                           <div className="absolute top-0 right-0 p-2 bg-orange-500 text-[#101622] font-bold text-[10px] rounded-bl-xl uppercase tracking-wider">
-                               En Préstamo
+                     {activeLoans.length > 0 ? (
+                        <div className="space-y-3">
+                           <div className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-orange-300">
+                             <AlertCircle size={14} /> {activeLoans.length} préstamo(s) activo(s)
                            </div>
-                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                              <div>
-                                 <span className="text-[#92a4c9] text-xs font-bold uppercase tracking-wider block mb-1">Código Instrumento</span>
-                                 <div className="text-2xl font-mono font-bold text-white mb-1">{activeLoan.codigoInventario}</div>
-                                 <div className="flex items-center gap-2 text-xs text-[#92a4c9]">
-                                    <span className="material-symbols-outlined text-sm">calendar_today</span>
-                                    Prestado el: {new Date(activeLoan.fechaPrestamo).toLocaleDateString()}
-                                 </div>
-                              </div>
-                              <div className="flex flex-col sm:flex-row gap-3">
-                                <button 
-                                  onClick={() => { setScannerMode('return'); setShowScanner(true); }}
-                                  className="w-full sm:w-auto px-5 py-3 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition flex items-center justify-center gap-2"
-                                >
-                                  <QrCode size={18} /> Devolver con QR
-                                </button>
-                                {!isStudent && (
-                                  <button 
-                                    onClick={() => handleReturnInstrument(activeLoan.stockInstrumentoId, activeLoan.codigoInventario || 'S/C')}
-                                    disabled={processingLoan}
-                                    className="w-full sm:w-auto px-5 py-3 bg-white text-slate-900 font-bold rounded-lg hover:bg-gray-200 transition flex items-center justify-center gap-2 disabled:opacity-50"
-                                  >
-                                    {processingLoan ? 'Procesando...' : (
-                                       <>
-                                         <ArrowRightLeft size={18} /> Devolver Manual
-                                       </>
+                           {activeLoans.map((loan: any) => (
+                             <div key={loan.prestamoInstrumentoId || loan.stockInstrumentoId} className="bg-[#232f48] rounded-xl p-5 border border-orange-500/30 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-2 bg-orange-500 text-[#101622] font-bold text-[10px] rounded-bl-xl uppercase tracking-wider">
+                                    En Préstamo
+                                </div>
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                  <div>
+                                     <span className="text-[#92a4c9] text-xs font-bold uppercase tracking-wider block mb-1">Código Instrumento</span>
+                                     <div className="text-2xl font-mono font-bold text-white mb-1">{loan.codigoInventario || `#${loan.stockInstrumentoId}`}</div>
+                                     <div className="flex items-center gap-2 text-xs text-[#92a4c9]">
+                                        <span className="material-symbols-outlined text-sm">calendar_today</span>
+                                        Prestado el: {new Date(loan.fechaPrestamo).toLocaleDateString()}
+                                     </div>
+                                  </div>
+                                  <div className="flex flex-col sm:flex-row gap-3">
+                                    <button 
+                                      onClick={() => { setScannerMode('return'); setShowScanner(true); }}
+                                      className="w-full sm:w-auto px-5 py-3 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition flex items-center justify-center gap-2"
+                                    >
+                                      <QrCode size={18} /> Devolver con QR
+                                    </button>
+                                    {!isStudent && (
+                                      <button 
+                                        onClick={() => handleReturnInstrument(loan.stockInstrumentoId, loan.codigoInventario || 'S/C')}
+                                        disabled={processingLoan}
+                                        className="w-full sm:w-auto px-5 py-3 bg-white text-slate-900 font-bold rounded-lg hover:bg-gray-200 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                                      >
+                                        {processingLoan ? 'Procesando...' : (
+                                           <>
+                                             <ArrowRightLeft size={18} /> Devolver Manual
+                                           </>
+                                        )}
+                                      </button>
                                     )}
-                                  </button>
-                                )}
-                              </div>
-                           </div>
+                                  </div>
+                                </div>
+                             </div>
+                           ))}
                         </div>
                      ) : legacyInstrument ? (
                         /* Case 2: Legacy String Instrument (Read Only View) */
@@ -618,59 +628,62 @@ const StudentProfile: React.FC = () => {
                             </p>
                          </div>
                      ) : (
-                        /* Case 3: No Active Loan - Show Lend Form */
+                        /* Case 3: No Active Loan */
                         <div className="bg-[#232f48]/50 rounded-xl p-5 border border-white/5 border-dashed">
                         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-300">
                           <Check size={14} /> Sin préstamo activo
                         </div>
                            <h4 className="text-white font-bold mb-3 text-sm">
-                              {isStudent ? 'Estado del Instrumento' : 'Asignar Nuevo Préstamo'}
+                              Estado del Instrumento
                            </h4>
-                           
-                           <div className="flex flex-col gap-4">
-                              <button 
-                                onClick={() => { setScannerMode('lend'); setShowScanner(true); }}
-                                className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition flex items-center justify-center gap-2"
-                              >
-                                <QrCode size={20} /> Escanear QR para Préstamo
-                              </button>
-
-                              {!isStudent && (
-                                <div className="pt-4 border-t border-white/5">
-                                  <p className="text-xs text-[#92a4c9] mb-3 uppercase font-bold tracking-wider">Asignación Manual (Admin)</p>
-                                  <form onSubmit={handleLendInstrument} className="flex flex-col sm:flex-row gap-3">
-                                     <select 
-                                       className="flex-1 bg-[#101622] border border-border-dark text-white px-4 py-2.5 rounded-lg focus:ring-1 focus:ring-orange-500 outline-none font-sans"
-                                       value={selectedStockId}
-                                       onChange={(e) => setSelectedStockId(e.target.value)}
-                                     >
-                                       <option value="">Seleccione un instrumento disponible...</option>
-                                       {availableStock.map(item => (
-                                         <option key={item.stockInstrumentoId} value={item.stockInstrumentoId}>
-                                           {item.codigoInventario} {item.numeroSerie ? `(SN: ${item.numeroSerie})` : ''}
-                                         </option>
-                                       ))}
-                                     </select>
-                                     <button 
-                                       type="submit"
-                                       disabled={!selectedStockId || processingLoan}
-                                       className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                     >
-                                       {processingLoan ? 'Procesando...' : (
-                                           <>
-                                               <Check size={18} /> Prestar
-                                           </>
-                                       )}
-                                     </button>
-                                  </form>
-                                </div>
-                              )}
-                           </div>
-
-                           {availableStock.length === 0 && !isStudent && (
-                             <p className="text-xs text-red-400 mt-2">No hay ejemplares disponibles para {getInstrumentName(student.instrumentoId)}.</p>
-                           )}
                         </div>
+                     )}
+
+                     {!isStudent && !legacyInstrument && (
+                       <div className="mt-4 bg-[#232f48]/50 rounded-xl p-5 border border-white/5 border-dashed">
+                         <h4 className="text-white font-bold mb-3 text-sm">Asignar Nuevo Préstamo</h4>
+                         <div className="flex flex-col gap-4">
+                           <button 
+                             onClick={() => { setScannerMode('lend'); setShowScanner(true); }}
+                             className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition flex items-center justify-center gap-2"
+                           >
+                             <QrCode size={20} /> Escanear QR para Préstamo
+                           </button>
+
+                           <div className="pt-4 border-t border-white/5">
+                             <p className="text-xs text-[#92a4c9] mb-3 uppercase font-bold tracking-wider">Asignación Manual (Admin)</p>
+                             <form onSubmit={handleLendInstrument} className="flex flex-col sm:flex-row gap-3">
+                               <select 
+                                 className="flex-1 bg-[#101622] border border-border-dark text-white px-4 py-2.5 rounded-lg focus:ring-1 focus:ring-orange-500 outline-none font-sans"
+                                 value={selectedStockId}
+                                 onChange={(e) => setSelectedStockId(e.target.value)}
+                               >
+                                 <option value="">Seleccione un instrumento disponible...</option>
+                                 {availableStock.map(item => (
+                                   <option key={item.stockInstrumentoId} value={item.stockInstrumentoId}>
+                                     {item.codigoInventario} {item.numeroSerie ? `(SN: ${item.numeroSerie})` : ''}
+                                   </option>
+                                 ))}
+                               </select>
+                               <button 
+                                 type="submit"
+                                 disabled={!selectedStockId || processingLoan}
+                                 className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                               >
+                                 {processingLoan ? 'Procesando...' : (
+                                   <>
+                                     <Check size={18} /> Prestar
+                                   </>
+                                 )}
+                               </button>
+                             </form>
+                           </div>
+                         </div>
+
+                         {availableStock.length === 0 && (
+                           <p className="text-xs text-red-400 mt-2">No hay ejemplares disponibles para {getInstrumentName(student.instrumentoId)}.</p>
+                         )}
+                       </div>
                      )}
                   </div>
 
