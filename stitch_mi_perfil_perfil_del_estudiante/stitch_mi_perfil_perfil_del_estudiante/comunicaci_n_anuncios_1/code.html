@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Orquesta Sinfónica Estudiantil - Gestión Administrativa</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2b6cee",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-dark": "#1a2230",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "3xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }.no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display min-h-screen flex flex-col transition-colors duration-200">
+<header class="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-solid border-[#e5e7eb] dark:border-[#232f48] bg-surface-light dark:bg-[#111722]/95 backdrop-blur-md px-4 py-3 lg:px-8">
+<div class="flex items-center gap-4 lg:gap-8">
+<div class="flex items-center gap-3 text-slate-900 dark:text-white">
+<div class="size-9 bg-primary/10 rounded-xl text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl fill">queue_music</span>
+</div>
+<h2 class="hidden md:block text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Orquesta <span class="text-primary">Admin</span></h2>
+</div>
+</div>
+<div class="flex flex-1 justify-end gap-4 lg:gap-8 items-center">
+<nav class="hidden lg:flex items-center gap-1 xl:gap-2">
+<a class="text-[#64748b] dark:text-[#92a4c9] hover:text-slate-900 dark:hover:text-white transition-colors text-sm font-medium leading-normal flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5" href="#">
+<span class="material-symbols-outlined text-[20px]">home</span>
+<span>Inicio</span>
+</a>
+<a class="text-[#64748b] dark:text-[#92a4c9] hover:text-slate-900 dark:hover:text-white transition-colors text-sm font-medium leading-normal flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5" href="#">
+<span class="material-symbols-outlined text-[20px]">forum</span>
+<span>Comunicación</span>
+</a>
+<a class="bg-primary text-white text-sm font-bold leading-normal flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg shadow-primary/25" href="#">
+<span class="material-symbols-outlined text-[20px] fill">admin_panel_settings</span>
+<span>Gestión</span>
+</a>
+</nav>
+<div class="flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-gray-800">
+<button class="flex items-center justify-center rounded-full size-10 bg-transparent text-[#64748b] dark:text-[#92a4c9] hover:bg-black/5 dark:hover:bg-white/5 transition-colors relative">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 lg:size-10 cursor-pointer border-2 border-transparent hover:border-primary transition-all ring-2 ring-transparent hover:ring-primary/30" data-alt="Admin profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC0XwVlHwb53i3SSNqR89WOhYVXc7c9td-2hVqET9SCKA3Ajz1QrGTmKPR9o4dhWyUsOy0x7u-wvDNvh2HJX2R6mXO4tcqh48FGz-lq9j7qGRBFDYrqDxm1JKs0dVWhYhMbelYw1ViKicDVu4aS7WzputzzO2IyUPoJF6f42cAhlGsxAiRRLyaYwNkPD1sOI_5q2sC-BrFVu2oE_ur5G7N9eIpjo3TImFDQLG_fM93BhUT7oweznpT-KX39ZfFCbueII84uW7p8rr3q");'></div>
+</div>
+</div>
+</header>
+<main class="flex-1 w-full max-w-[1600px] mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-80px)] overflow-hidden">
+<aside class="hidden lg:flex lg:col-span-2 xl:col-span-2 flex-col gap-1 h-full overflow-y-auto pr-2">
+<div class="pb-4">
+<p class="px-4 text-xs font-bold text-[#64748b] dark:text-[#6c7d9e] uppercase tracking-wider mb-2">Principal</p>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-[#64748b] dark:text-[#92a4c9] hover:bg-surface-light dark:hover:bg-surface-dark hover:text-slate-900 dark:hover:text-white transition-all font-medium group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">dashboard</span>
+<span>Resumen</span>
+</a>
+</div>
+<div class="pb-4">
+<p class="px-4 text-xs font-bold text-[#64748b] dark:text-[#6c7d9e] uppercase tracking-wider mb-2">Gestión</p>
+<a class="flex items-center justify-between px-4 py-3 rounded-xl bg-primary/10 text-primary dark:text-white font-bold shadow-sm ring-1 ring-primary/20" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined fill">school</span>
+<span>Estudiantes</span>
+</div>
+<span class="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded-md">124</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-[#64748b] dark:text-[#92a4c9] hover:bg-surface-light dark:hover:bg-surface-dark hover:text-slate-900 dark:hover:text-white transition-all font-medium group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">person_apron</span>
+<span>Profesores</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-[#64748b] dark:text-[#92a4c9] hover:bg-surface-light dark:hover:bg-surface-dark hover:text-slate-900 dark:hover:text-white transition-all font-medium group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">music_note</span>
+<span>Cursos</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-[#64748b] dark:text-[#92a4c9] hover:bg-surface-light dark:hover:bg-surface-dark hover:text-slate-900 dark:hover:text-white transition-all font-medium group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">piano</span>
+<span>Instrumentos</span>
+</a>
+</div>
+<div class="mt-auto">
+<div class="bg-gradient-to-br from-primary to-purple-600 rounded-2xl p-4 text-white relative overflow-hidden">
+<div class="absolute -top-2 -right-2 bg-white/20 size-16 rounded-full blur-xl"></div>
+<h4 class="font-bold relative z-10">Próximo Evento</h4>
+<p class="text-xs text-white/80 mt-1 relative z-10 mb-3">Concierto de Primavera</p>
+<button class="w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm py-1.5 rounded-lg text-xs font-bold transition-colors">Ver Detalles</button>
+</div>
+</div>
+</aside>
+<section class="col-span-1 lg:col-span-10 xl:col-span-10 flex flex-col h-full overflow-hidden bg-surface-light dark:bg-surface-dark rounded-3xl shadow-sm border border-[#e5e7eb] dark:border-[#232f48] relative">
+<div class="p-6 border-b border-[#e5e7eb] dark:border-[#232f48] flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-light dark:bg-surface-dark z-10 sticky top-0">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-[#64748b] dark:text-[#92a4c9] text-sm font-medium">Gestión</span>
+<span class="material-symbols-outlined text-xs text-[#64748b]">chevron_right</span>
+<span class="text-primary font-bold text-sm">Estudiantes</span>
+</div>
+<h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Directorio de Estudiantes</h1>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e5e7eb] dark:border-[#232f48] text-slate-700 dark:text-white font-medium hover:bg-background-light dark:hover:bg-[#111722] transition-colors text-sm">
+<span class="material-symbols-outlined text-[20px]">file_upload</span>
+<span class="hidden sm:inline">Exportar</span>
+</button>
+<button class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-blue-600 text-white font-bold transition-all shadow-lg shadow-primary/25 text-sm transform active:scale-95">
+<span class="material-symbols-outlined text-[20px]">add</span>
+<span>Nuevo Estudiante</span>
+</button>
+</div>
+</div>
+<div class="px-6 py-4 bg-background-light/50 dark:bg-[#151c2a] flex flex-wrap gap-3 items-center justify-between">
+<div class="flex items-center gap-3 flex-1 min-w-[200px] max-w-lg">
+<div class="relative flex-1 group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b] group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full bg-white dark:bg-[#111722] border border-[#e5e7eb] dark:border-[#232f48] text-slate-900 dark:text-white rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none shadow-sm" placeholder="Buscar por nombre, instrumento o ID..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
+<div class="flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#111722] border border-[#e5e7eb] dark:border-[#232f48] rounded-xl text-sm text-slate-600 dark:text-[#92a4c9]">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+<span class="font-medium">Filtros:</span>
+</div>
+<select class="bg-white dark:bg-[#111722] border border-[#e5e7eb] dark:border-[#232f48] text-slate-700 dark:text-white rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer">
+<option>Todos los Instrumentos</option>
+<option>Cuerdas</option>
+<option>Vientos</option>
+<option>Percusión</option>
+</select>
+<select class="bg-white dark:bg-[#111722] border border-[#e5e7eb] dark:border-[#232f48] text-slate-700 dark:text-white rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer">
+<option>Estado: Activo</option>
+<option>Estado: Inactivo</option>
+<option>Estado: En Pausa</option>
+</select>
+</div>
+</div>
+<div class="flex-1 overflow-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-background-light dark:bg-[#151c2a] sticky top-0 z-10">
+<tr>
+<th class="px-6 py-4 text-xs font-bold text-[#64748b] dark:text-[#6c7d9e] uppercase tracking-wider">Estudiante</th>
+<th class="px-6 py-4 text-xs font-bold text-[#64748b] dark:text-[#6c7d9e] uppercase tracking-wider">Instrumento</th>
+<th class="px-6 py-4 text-xs font-bold text-[#64748b] dark:text-[#6c7d9e] uppercase tracking-wider hidden md:table-cell">Nivel</th>
+<th class="px-6 py-4 text-xs font-bold text-[#64748b] dark:text-[#6c7d9e] uppercase tracking-wider">Estado</th>
+<th class="px-6 py-4 text-xs font-bold text-[#64748b] dark:text-[#6c7d9e] uppercase tracking-wider text-right">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#e5e7eb] dark:divide-[#232f48]">
+<tr class="group hover:bg-background-light/50 dark:hover:bg-[#1a2230] transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 shadow-sm ring-2 ring-white dark:ring-[#232f48]" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC0XwVlHwb53i3SSNqR89WOhYVXc7c9td-2hVqET9SCKA3Ajz1QrGTmKPR9o4dhWyUsOy0x7u-wvDNvh2HJX2R6mXO4tcqh48FGz-lq9j7qGRBFDYrqDxm1JKs0dVWhYhMbelYw1ViKicDVu4aS7WzputzzO2IyUPoJF6f42cAhlGsxAiRRLyaYwNkPD1sOI_5q2sC-BrFVu2oE_ur5G7N9eIpjo3TImFDQLG_fM93BhUT7oweznpT-KX39ZfFCbueII84uW7p8rr3q");'></div>
+<div>
+<h3 class="text-sm font-bold text-slate-900 dark:text-white">Sofía Ramírez</h3>
+<p class="text-xs text-[#64748b] dark:text-[#92a4c9]">sofia.ramirez@orquesta.edu</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="size-6 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]">music_note</span>
+</span>
+<span class="text-sm font-medium text-slate-700 dark:text-white">Violín I</span>
+</div>
+</td>
+<td class="px-6 py-4 hidden md:table-cell">
+<span class="text-sm text-slate-600 dark:text-[#92a4c9]">Avanzado</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 text-xs font-bold border border-green-200 dark:border-green-500/20">
+<span class="size-1.5 rounded-full bg-green-500"></span>
+                                        Activo
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 rounded-lg text-[#64748b] hover:text-primary hover:bg-primary/10 transition-colors" title="Editar">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="p-2 rounded-lg text-[#64748b] hover:text-red-500 hover:bg-red-500/10 transition-colors" title="Eliminar">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="group hover:bg-background-light/50 dark:hover:bg-[#1a2230] transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 shadow-sm ring-2 ring-white dark:ring-[#232f48]" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB-5m8vZZC4otB1SInmwPrp88-uijRSW-o0d3g_1I9I24nSuKlRjmYlI4omG6LrtjLCbtdpMsLPxq7JN6I71Y2I-0p6d_JgG30jDvRqf1fHuM4szjt1AxoHFrQErCLQY7WrndcscidU7Yosxq9gFT0iDuNQ6cdeoU13Fuuo7cpq9dZIEwBXwavUqM73PXOZinGJJjEi4qnU1O_XOclLjbeHfMZG7ZgugdVME7BHeeoyHY7xOO0nLJwuHttNQnqdTUHHZ1zSGjKG_jY6");'></div>
+<div>
+<h3 class="text-sm font-bold text-slate-900 dark:text-white">Carlos Méndez</h3>
+<p class="text-xs text-[#64748b] dark:text-[#92a4c9]">c.mendez@orquesta.edu</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="size-6 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]">graphic_eq</span>
+</span>
+<span class="text-sm font-medium text-slate-700 dark:text-white">Cello</span>
+</div>
+</td>
+<td class="px-6 py-4 hidden md:table-cell">
+<span class="text-sm text-slate-600 dark:text-[#92a4c9]">Intermedio</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 text-xs font-bold border border-green-200 dark:border-green-500/20">
+<span class="size-1.5 rounded-full bg-green-500"></span>
+                                        Activo
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 rounded-lg text-[#64748b] hover:text-primary hover:bg-primary/10 transition-colors" title="Editar">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="p-2 rounded-lg text-[#64748b] hover:text-red-500 hover:bg-red-500/10 transition-colors" title="Eliminar">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="group hover:bg-background-light/50 dark:hover:bg-[#1a2230] transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 shadow-sm ring-2 ring-white dark:ring-[#232f48]" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDna3tZHYlCnPH5YocW2w6YjqvTAM466LAEjH9C2pG5EvpXRnm9cmWDNjx3lLk--v2Yd0e9mVWWGm_6AFzmw6EE8hbV2gF-ErQMHq2vijaW_dVZ0AooRR9ECJJq5Uxbh7IpITwAEHatcqnQjepJw8IPkFs78spitsGILSWW1R4PXZlhpoTni2eREzs_BG1hPC8udWqVBJf9e7ZU2e_yCKjbw494Mv94hBh5OWfS_2SFT-6XhaRjk9b2h8pUBhBrRicxY7_fYOZZ4KC7");'></div>
+<div>
+<h3 class="text-sm font-bold text-slate-900 dark:text-white">Elena Gómez</h3>
+<p class="text-xs text-[#64748b] dark:text-[#92a4c9]">elena.g@orquesta.edu</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="size-6 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]">air</span>
+</span>
+<span class="text-sm font-medium text-slate-700 dark:text-white">Flauta</span>
+</div>
+</td>
+<td class="px-6 py-4 hidden md:table-cell">
+<span class="text-sm text-slate-600 dark:text-[#92a4c9]">Principiante</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-100 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 text-xs font-bold border border-yellow-200 dark:border-yellow-500/20">
+<span class="size-1.5 rounded-full bg-yellow-500"></span>
+                                        Permiso
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 rounded-lg text-[#64748b] hover:text-primary hover:bg-primary/10 transition-colors" title="Editar">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="p-2 rounded-lg text-[#64748b] hover:text-red-500 hover:bg-red-500/10 transition-colors" title="Eliminar">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="group hover:bg-background-light/50 dark:hover:bg-[#1a2230] transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 shadow-sm ring-2 ring-white dark:ring-[#232f48]" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA3g2r8xxPEycctoq9yXKwJBTOY3r1doaJSbQFHpLiuk6KPan0fthhCRmbVyfBeHo48W4jfpDf2QCt19vMNk6eFJr_MrNRXvP3CxnX6ZehI5Eq3hLdJP8pTpatif3HsyuIwb9iBmd-WqExDwe515aXQCvV2eLm6QIwVi5u64F8i5V4DIo-Wy5KA3z_sY8Ek6XIyiydnjT8wpkjkMjKq9FsDS33C3hUeh0cDVpAmkJ36HsUKCsy91-QoPJIQyj724ywW9DY-JrOv1SQ8");'></div>
+<div>
+<h3 class="text-sm font-bold text-slate-900 dark:text-white">David Kim</h3>
+<p class="text-xs text-[#64748b] dark:text-[#92a4c9]">d.kim@orquesta.edu</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="size-6 rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]">bubble</span>
+</span>
+<span class="text-sm font-medium text-slate-700 dark:text-white">Trompeta</span>
+</div>
+</td>
+<td class="px-6 py-4 hidden md:table-cell">
+<span class="text-sm text-slate-600 dark:text-[#92a4c9]">Avanzado</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 text-xs font-bold border border-red-200 dark:border-red-500/20">
+<span class="size-1.5 rounded-full bg-red-500"></span>
+                                        Inactivo
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 rounded-lg text-[#64748b] hover:text-primary hover:bg-primary/10 transition-colors" title="Editar">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="p-2 rounded-lg text-[#64748b] hover:text-red-500 hover:bg-red-500/10 transition-colors" title="Eliminar">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="group hover:bg-background-light/50 dark:hover:bg-[#1a2230] transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 shadow-sm ring-2 ring-white dark:ring-[#232f48]" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA23lRWB1ZXojBAPBOHIXbBg9DY1LLlpvumMAt2dPj4yzqxuFTEzhSEfDMVdZo71-cHOjcWQkEPbNS-FN46a1GWaaJWu3vil_Qa-bp4ilet-6cucuPAfGYF9iSevoT1S23QpRHq68h12MLwdPQcH2vWWGUylRJKqA_2UicM1X63pH9bbEdzz66sG1Bq1bzLXZVdYZjKL7lKtVvM1eWddQDtaOi1xJ11X01xVkf2FRipqk62dBe0GT3x9sbsARZumD6NYvJanM5pWBGW");'></div>
+<div>
+<h3 class="text-sm font-bold text-slate-900 dark:text-white">Ana López</h3>
+<p class="text-xs text-[#64748b] dark:text-[#92a4c9]">ana.lopez@orquesta.edu</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="size-6 rounded bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]">circle</span>
+</span>
+<span class="text-sm font-medium text-slate-700 dark:text-white">Percusión</span>
+</div>
+</td>
+<td class="px-6 py-4 hidden md:table-cell">
+<span class="text-sm text-slate-600 dark:text-[#92a4c9]">Intermedio</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 text-xs font-bold border border-green-200 dark:border-green-500/20">
+<span class="size-1.5 rounded-full bg-green-500"></span>
+                                        Activo
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 rounded-lg text-[#64748b] hover:text-primary hover:bg-primary/10 transition-colors" title="Editar">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="p-2 rounded-lg text-[#64748b] hover:text-red-500 hover:bg-red-500/10 transition-colors" title="Eliminar">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 border-t border-[#e5e7eb] dark:border-[#232f48] flex items-center justify-between">
+<p class="text-xs text-[#64748b] dark:text-[#92a4c9]">Mostrando <span class="font-bold text-slate-900 dark:text-white">1-5</span> de <span class="font-bold text-slate-900 dark:text-white">124</span> estudiantes</p>
+<div class="flex gap-2">
+<button class="px-3 py-1.5 rounded-lg border border-[#e5e7eb] dark:border-[#232f48] text-slate-600 dark:text-[#92a4c9] text-xs font-medium hover:bg-background-light dark:hover:bg-[#111722] disabled:opacity-50" disabled="">Anterior</button>
+<button class="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold hover:bg-blue-600 shadow-sm">1</button>
+<button class="px-3 py-1.5 rounded-lg border border-[#e5e7eb] dark:border-[#232f48] text-slate-600 dark:text-[#92a4c9] text-xs font-medium hover:bg-background-light dark:hover:bg-[#111722]">2</button>
+<button class="px-3 py-1.5 rounded-lg border border-[#e5e7eb] dark:border-[#232f48] text-slate-600 dark:text-[#92a4c9] text-xs font-medium hover:bg-background-light dark:hover:bg-[#111722]">3</button>
+<button class="px-3 py-1.5 rounded-lg border border-[#e5e7eb] dark:border-[#232f48] text-slate-600 dark:text-[#92a4c9] text-xs font-medium hover:bg-background-light dark:hover:bg-[#111722]">Siguiente</button>
+</div>
+</div>
+</section>
+</main>
+</body></html>

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Gestión de Repertorio - Orquesta</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2b6cee",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-dark": "#161e2d",
+                        "card-dark": "#1e2736",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for modern feel */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #101622;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2b6cee;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #1a4bb0;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white overflow-hidden">
+<div class="flex h-screen w-full overflow-hidden">
+<!-- SideNavBar -->
+<div class="hidden md:flex w-72 flex-col border-r border-[#232f48] bg-background-dark p-6 h-full shrink-0">
+<div class="flex flex-col gap-8 h-full">
+<!-- Profile/Brand -->
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-12 shadow-lg shadow-blue-900/20" data-alt="Profile picture of a student musician" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCKZIaDkNsdinsM4_LYnCVZeAB8PCsnETao7hGtPrK1xdVW01H9-mclj4CyPyCQrpWv-Qaj3_ucOU8xMKqVTtvGr1lB_Nlr6ILBuodvmVhwrPYjg1yJ0uv8ziRsHRdgEgaqM7dm50Ved0tbteLAxWiNEYKGb5MfbVRKDbgCK7wcEFIYCNWSf8zvsh0UJSGkHwnOH16ybSAoidMVlQBoAiC50HiZoz8gbgahfQEZcOV5KzxS7ZSQJaI-Jo3ZIinZpvBep2lx7dbLX9XJ");'></div>
+<div class="flex flex-col">
+<h1 class="text-white text-lg font-bold leading-tight">Orquesta</h1>
+<p class="text-[#92a4c9] text-xs font-normal">Panel de Estudiante</p>
+</div>
+</div>
+<!-- Navigation -->
+<div class="flex flex-col gap-2 flex-1">
+<div class="group flex items-center gap-3 px-4 py-3 rounded-xl bg-primary text-white cursor-pointer transition-all hover:bg-primary/90">
+<span class="material-symbols-outlined text-[24px]">music_note</span>
+<p class="text-sm font-semibold">Repertorio</p>
+</div>
+<div class="group flex items-center gap-3 px-4 py-3 rounded-xl text-[#92a4c9] hover:bg-[#1e2736] hover:text-white cursor-pointer transition-all">
+<span class="material-symbols-outlined text-[24px]">folder_open</span>
+<p class="text-sm font-medium">Mis Partituras</p>
+</div>
+<div class="group flex items-center gap-3 px-4 py-3 rounded-xl text-[#92a4c9] hover:bg-[#1e2736] hover:text-white cursor-pointer transition-all">
+<span class="material-symbols-outlined text-[24px]">history</span>
+<p class="text-sm font-medium">Historial</p>
+</div>
+<div class="group flex items-center gap-3 px-4 py-3 rounded-xl text-[#92a4c9] hover:bg-[#1e2736] hover:text-white cursor-pointer transition-all">
+<span class="material-symbols-outlined text-[24px]">queue_music</span>
+<p class="text-sm font-medium">Listas</p>
+</div>
+</div>
+<!-- Bottom Actions -->
+<div class="mt-auto pt-6 border-t border-[#232f48]">
+<div class="group flex items-center gap-3 px-4 py-3 rounded-xl text-[#92a4c9] hover:bg-[#1e2736] hover:text-red-400 cursor-pointer transition-all">
+<span class="material-symbols-outlined text-[24px]">logout</span>
+<p class="text-sm font-medium">Cerrar Sesión</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Content Area -->
+<div class="flex flex-col flex-1 h-full overflow-hidden bg-background-dark">
+<!-- TopNavBar -->
+<header class="flex items-center justify-between border-b border-[#232f48] bg-background-dark/80 backdrop-blur-md px-6 py-4 z-20 shrink-0 sticky top-0">
+<div class="flex items-center gap-8 w-full max-w-4xl">
+<h2 class="text-white text-xl font-bold tracking-tight whitespace-nowrap hidden lg:block">Repertorio 2024</h2>
+<!-- Search Bar -->
+<label class="flex flex-col flex-1 max-w-lg">
+<div class="flex w-full items-center rounded-xl bg-[#1e2736] h-12 border border-transparent focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+<div class="pl-4 text-[#92a4c9] flex items-center justify-center">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="w-full bg-transparent border-none text-white placeholder-[#92a4c9] text-sm font-normal px-4 focus:ring-0" placeholder="Buscar por obra, compositor o instrumento..." value=""/>
+</div>
+</label>
+</div>
+<div class="flex items-center gap-4 pl-4">
+<button class="relative flex items-center justify-center size-10 rounded-full bg-[#1e2736] text-white hover:bg-[#2a3649] transition-colors">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-[#1e2736]"></span>
+</button>
+<button class="flex items-center justify-center size-10 rounded-full bg-[#1e2736] text-white hover:bg-[#2a3649] transition-colors">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+</button>
+<!-- Mobile Menu Button -->
+<button class="md:hidden flex items-center justify-center size-10 rounded-full bg-[#1e2736] text-white hover:bg-[#2a3649] transition-colors">
+<span class="material-symbols-outlined text-[20px]">menu</span>
+</button>
+</div>
+</header>
+<!-- Scrollable Content -->
+<main class="flex-1 overflow-y-auto p-6 md:p-8 scroll-smooth">
+<div class="max-w-[1200px] mx-auto flex flex-col gap-8 pb-20">
+<!-- HeroSection -->
+<div class="@container w-full">
+<div class="relative overflow-hidden rounded-2xl w-full min-h-[360px] flex flex-col justify-end p-8 md:p-12 bg-cover bg-center group" data-alt="Orchestra playing dramatic classical music in a concert hall" style='background-image: linear-gradient(to top, rgba(16, 22, 34, 1) 0%, rgba(16, 22, 34, 0.4) 50%, rgba(16, 22, 34, 0.2) 100%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuAnvXBMJSFqqKhz9ZNyykHRIINrhvfqx557Oso3_p0FUFVk-jzBSJ2GJ1LwFvZ2n5XSOd_wRiGfDlbOMqGtCI-pnQR8zS9mhHVW9DlMF4sjGQVoW0I3TuscO8N3Hwq8E_XqiDKnfk3qeocQHJAgZlZtQRkvH5g1FkLsHfOMVV3zqjkFwhXq4LxpHLmA3-Il-vlGkgxnDl4nwUdFdJvCDU8OoCh30IwvTIXm9BBtEtx56y9g8mVVnwp3p4jZTpCKJgNoeA16-BhUoQaU");'>
+<div class="absolute top-4 right-4 bg-primary/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+                                ENSAYANDO AHORA
+                            </div>
+<div class="relative z-10 flex flex-col gap-4 max-w-2xl transform transition-transform duration-500 group-hover:translate-y-[-4px]">
+<div class="flex flex-col gap-1">
+<h2 class="text-primary-300 text-sm font-semibold tracking-wide uppercase text-blue-400">Ludwig van Beethoven</h2>
+<h1 class="text-white text-4xl md:text-5xl lg:text-6xl font-black leading-[1.1] tracking-tight">
+                                        Sinfonía No. 9
+                                    </h1>
+<p class="text-gray-300 text-lg md:text-xl font-light mt-2 max-w-lg">
+                                        Preparación para el concierto de fin de año. Enfocados en el Movimiento IV: "Oda a la Alegría".
+                                    </p>
+</div>
+<div class="flex flex-wrap gap-4 mt-4">
+<button class="flex items-center gap-2 h-12 px-6 bg-primary hover:bg-blue-600 text-white rounded-lg font-bold transition-all shadow-lg shadow-blue-900/40">
+<span class="material-symbols-outlined">visibility</span>
+<span>Ver Partitura</span>
+</button>
+<button class="flex items-center gap-2 h-12 px-6 bg-[#1e2736]/80 hover:bg-[#2a3649] backdrop-blur-md text-white rounded-lg font-bold transition-all border border-white/10">
+<span class="material-symbols-outlined">play_arrow</span>
+<span>Escuchar Referencia</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Filters & Section Header -->
+<div class="flex flex-col gap-4">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<h2 class="text-white text-2xl font-bold tracking-tight">Biblioteca de Piezas</h2>
+<!-- Chips -->
+<div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+<button class="flex shrink-0 items-center justify-center px-4 py-2 rounded-lg bg-white text-background-dark font-medium text-sm transition-colors">
+                                    Todo
+                                </button>
+<button class="flex shrink-0 items-center justify-center px-4 py-2 rounded-lg bg-[#1e2736] hover:bg-[#2a3649] text-gray-300 font-medium text-sm transition-colors border border-white/5">
+                                    Cuerdas
+                                </button>
+<button class="flex shrink-0 items-center justify-center px-4 py-2 rounded-lg bg-[#1e2736] hover:bg-[#2a3649] text-gray-300 font-medium text-sm transition-colors border border-white/5">
+                                    Vientos
+                                </button>
+<button class="flex shrink-0 items-center justify-center px-4 py-2 rounded-lg bg-[#1e2736] hover:bg-[#2a3649] text-gray-300 font-medium text-sm transition-colors border border-white/5">
+                                    Percusión
+                                </button>
+<button class="flex shrink-0 items-center justify-center px-4 py-2 rounded-lg bg-[#1e2736] hover:bg-[#2a3649] text-blue-400 font-medium text-sm transition-colors border border-blue-500/20">
+<span class="material-symbols-outlined text-[18px] mr-2">event</span>
+                                    Próximo Concierto
+                                </button>
+</div>
+</div>
+</div>
+<!-- Repertoire Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+<!-- Card 1 -->
+<div class="group relative flex flex-col bg-[#161e2d] rounded-2xl overflow-hidden border border-[#232f48] hover:border-[#3b4b66] transition-all hover:shadow-2xl hover:shadow-black/50 hover:-translate-y-1">
+<div class="relative aspect-[4/3] overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="Sheet music cover for Beethoven Symphony No. 5" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCWPw3Yxw4GPXWVbpmgXNf1QvjpHvlvjukAr68J8hzp2e_aQw5X0tv-r73HrQdFYq8Pe0h-PlViJMyIIVr5fB6G9Gel6Jt4IDWnECzIMZV4Pw22m1mcEtwB_QH7vWpzCmPA8kU8wdMyYmwYO84yycWGPWDfIvkaBIWs4Zk_gY0NgnH7D7eUi_zWIS0xYFEoD7J4A3e1PdY18oPf7q8X9ISIme0Gsq-0BuptLOGU8wZlm2_-VawyJRdX1K7fyq1XFZsSmXIgQI9N9Gxt");'>
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-[#161e2d] via-transparent to-transparent opacity-90"></div>
+<button class="absolute bottom-4 right-4 size-12 bg-primary rounded-full flex items-center justify-center text-white shadow-lg opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+<span class="material-symbols-outlined">play_arrow</span>
+</button>
+</div>
+<div class="p-5 flex flex-col gap-3 flex-1">
+<div>
+<h3 class="text-white text-lg font-bold leading-tight line-clamp-1 group-hover:text-primary transition-colors">Sinfonía No. 5</h3>
+<p class="text-gray-400 text-sm mt-1">L. van Beethoven</p>
+</div>
+<div class="mt-auto pt-3 border-t border-[#232f48] flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="px-2 py-1 rounded bg-blue-500/10 text-blue-400 text-xs font-semibold">C menor</span>
+<span class="px-2 py-1 rounded bg-[#232f48] text-gray-400 text-xs">Op. 67</span>
+</div>
+<div class="flex gap-2 text-gray-400">
+<button class="hover:text-white transition-colors"><span class="material-symbols-outlined text-[20px]">download</span></button>
+<button class="hover:text-white transition-colors"><span class="material-symbols-outlined text-[20px]">favorite_border</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group relative flex flex-col bg-[#161e2d] rounded-2xl overflow-hidden border border-[#232f48] hover:border-[#3b4b66] transition-all hover:shadow-2xl hover:shadow-black/50 hover:-translate-y-1">
+<div class="relative aspect-[4/3] overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="Starry night sky representing Star Wars Suite" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBKBD6uTa5f7xc9ijaHfzBovQ8lfdSVklqRWVwYHvVanBBrchcfCd7FmoeZkWjLJQs1IIDd_UOFmZ3X4OvnruXfI8v-rP-9zP7kYiNxCU34acpRdYSGs5M7EU2RlDmOtjDghKl9VFKTe7fKno42SnNFOxoxhN_wqicmI3wAx4p88M8fAtGFSh_2Fd6GOzx1v6JdQcmgolY4n49AnGDF53zLt9YXBU5O7j2KXIhu0nQi7UeCjobAMIdCuD1tSXEyyMQjIMkCcAUL5qMK");'>
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-[#161e2d] via-transparent to-transparent opacity-90"></div>
+<button class="absolute bottom-4 right-4 size-12 bg-primary rounded-full flex items-center justify-center text-white shadow-lg opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+<span class="material-symbols-outlined">play_arrow</span>
+</button>
+</div>
+<div class="p-5 flex flex-col gap-3 flex-1">
+<div>
+<h3 class="text-white text-lg font-bold leading-tight line-clamp-1 group-hover:text-primary transition-colors">Star Wars Suite</h3>
+<p class="text-gray-400 text-sm mt-1">John Williams</p>
+</div>
+<div class="mt-auto pt-3 border-t border-[#232f48] flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="px-2 py-1 rounded bg-yellow-500/10 text-yellow-500 text-xs font-semibold">Pops</span>
+<span class="px-2 py-1 rounded bg-[#232f48] text-gray-400 text-xs">Arr. 2023</span>
+</div>
+<div class="flex gap-2 text-gray-400">
+<button class="hover:text-white transition-colors"><span class="material-symbols-outlined text-[20px]">download</span></button>
+<button class="hover:text-white transition-colors"><span class="material-symbols-outlined text-[20px]">favorite_border</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group relative flex flex-col bg-[#161e2d] rounded-2xl overflow-hidden border border-[#232f48] hover:border-[#3b4b66] transition-all hover:shadow-2xl hover:shadow-black/50 hover:-translate-y-1">
+<div class="relative aspect-[4/3] overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="Abstract classical music composition pattern" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBGG_2xnjC5sPVbf-LFmP9KLJ-m1hnstxlqsNfCYtIp21zGqZVo6cgsJp8YSGkgfrJsygzfHmU02HB2fb9qi2lCb8mZDHH9vkNHE8-rUG6--v3vowicsuRKDWW5_hiU3nz1XnQDOPBurOvk5whDVh6t1QnyHlNBJM53FIjHxnS0yvumCeS-4ARFsy8QMyC-DeSzmgGJdciwUTe_MUh3VKCbmen1Ou9h9UDpIU_g4HgpGpJZwtoTb17lprJvduF4Wcz8TKQrep2S818M");'>
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-[#161e2d] via-transparent to-transparent opacity-90"></div>
+<button class="absolute bottom-4 right-4 size-12 bg-primary rounded-full flex items-center justify-center text-white shadow-lg opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+<span class="material-symbols-outlined">play_arrow</span>
+</button>
+</div>
+<div class="p-5 flex flex-col gap-3 flex-1">
+<div>
+<h3 class="text-white text-lg font-bold leading-tight line-clamp-1 group-hover:text-primary transition-colors">Danzón No. 2</h3>
+<p class="text-gray-400 text-sm mt-1">Arturo Márquez</p>
+</div>
+<div class="mt-auto pt-3 border-t border-[#232f48] flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="px-2 py-1 rounded bg-red-500/10 text-red-400 text-xs font-semibold">Latino</span>
+<span class="px-2 py-1 rounded bg-[#232f48] text-gray-400 text-xs">Completo</span>
+</div>
+<div class="flex gap-2 text-gray-400">
+<button class="hover:text-white transition-colors"><span class="material-symbols-outlined text-[20px]">download</span></button>
+<button class="hover:text-white transition-colors"><span class="material-symbols-outlined text-[20px]">favorite_border</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="group relative flex flex-col bg-[#161e2d] rounded-2xl overflow-hidden border border-[#232f48] hover:border-[#3b4b66] transition-all hover:shadow-2xl hover:shadow-black/50 hover:-translate-y-1">
+<div class="relative aspect-[4/3] overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="Close up of a cello instrument" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBf0GMkOj3fsh3N2_vEQ9qD-pyG00GTYQaZp3vagPj6EBJUhXJRwOGuJetNM8LjZqwIT53tg2M0Z-g676Kt2wHqNIkYUVo_9P9qLhwqLjneOLpMXgVRjAbe5CXOubfa6eGfp0PPTQuvssOPCy0pFQo0LuWRjotlZnwEKYOSQCKngWOeaRvmjoVls069b7odaTbz2A5wzWBGOI9Rux1rdORgAGJBpdtQCo6br7gLFnHj5iTnJTkY6lvL_NNcBkctPyPnGUZYyJsYdQT_");'>
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-[#161e2d] via-transparent to-transparent opacity-90"></div>
+<button class="absolute bottom-4 right-4 size-12 bg-primary rounded-full flex items-center justify-center text-white shadow-lg opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+<span class="material-symbols-outlined">play_arrow</span>
+</button>
+</div>
+<div class="p-5 flex flex-col gap-3 flex-1">
+<div>
+<h3 class="text-white text-lg font-bold leading-tight line-clamp-1 group-hover:text-primary transition-colors">Serenata para Cuerdas</h3>
+<p class="text-gray-400 text-sm mt-1">Antonín Dvořák</p>
+</div>
+<div class="mt-auto pt-3 border-t border-[#232f48] flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="px-2 py-1 rounded bg-purple-500/10 text-purple-400 text-xs font-semibold">Cuerdas</span>
+<span class="px-2 py-1 rounded bg-[#232f48] text-gray-400 text-xs">Op. 22</span>
+</div>
+<div class="flex gap-2 text-gray-400">
+<button class="hover:text-white transition-colors"><span class="material-symbols-outlined text-[20px]">download</span></button>
+<button class="hover:text-white transition-colors"><span class="material-symbols-outlined text-[20px]">favorite_border</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 5 -->
+<div class="group relative flex flex-col bg-[#161e2d] rounded-2xl overflow-hidden border border-[#232f48] hover:border-[#3b4b66] transition-all hover:shadow-2xl hover:shadow-black/50 hover:-translate-y-1">
+<div class="relative aspect-[4/3] overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="Minimalist abstract waves representing sound" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDJfmLRBLytiM1s2f9lGlFlu7qCBdIGKCYqEIaacwtrffyg3AVk2Kh5LKj9P5YzBNVFdJ8jdPdZ1vPQqZhvutQedGThgwWBLoMpi-lVDdPyw30UEitto4r5A7eG1z68CPEk-C_PaELrr6_se4qjIGAElTq1f_T_4maz0jk-5mgdi2WmsEXlh-23NzQvbsgh0MfuCDexDigzYjvVAUnLRSef2D-8b8KZ4D5dfddNi3xbR5wsdl5x8IgS9FNrOUHWZ4E1uY0Dk8zP1ifb");'>
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-[#161e2d] via-transparent to-transparent opacity-90"></div>
+<button class="absolute bottom-4 right-4 size-12 bg-primary rounded-full flex items-center justify-center text-white shadow-lg opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+<span class="material-symbols-outlined">play_arrow</span>
+</button>
+</div>
+<div class="p-5 flex flex-col gap-3 flex-1">
+<div>
+<h3 class="text-white text-lg font-bold leading-tight line-clamp-1 group-hover:text-primary transition-colors">El Pájaro de Fuego</h3>
+<p class="text-gray-400 text-sm mt-1">Igor Stravinsky</p>
+</div>
+<div class="mt-auto pt-3 border-t border-[#232f48] flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="px-2 py-1 rounded bg-orange-500/10 text-orange-400 text-xs font-semibold">Ballet</span>
+<span class="px-2 py-1 rounded bg-[#232f48] text-gray-400 text-xs">Suite 1919</span>
+</div>
+<div class="flex gap-2 text-gray-400">
+<button class="hover:text-white transition-colors"><span class="material-symbols-outlined text-[20px]">download</span></button>
+<button class="hover:text-white transition-colors"><span class="material-symbols-outlined text-[20px]">favorite_border</span></button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

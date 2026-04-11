@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { dataService, authService } from '../services/api';
 import { Student, InstrumentLoan } from '../types';
 import { getInstrumentName } from '../constants';
@@ -9,6 +9,7 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 
 const StudentProfile: React.FC = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
   
@@ -24,6 +25,8 @@ const StudentProfile: React.FC = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [scannerMode, setScannerMode] = useState<'lend' | 'return' | null>(null);
   const [scannerError, setScannerError] = useState<string | null>(null);
+  const [showDeleteOptions, setShowDeleteOptions] = useState(false);
+  const [deleteActionLoading, setDeleteActionLoading] = useState(false);
 
   const role = authService.getUserRole();
   const isStudent = role === 'student';
@@ -115,6 +118,48 @@ const StudentProfile: React.FC = () => {
       alert(error?.message || 'Error al dar de baja del curso');
     } finally {
       setProcessingCourseChange(false);
+    }
+  };
+
+  const closeDeleteModal = () => {
+    if (deleteActionLoading) return;
+    setShowDeleteOptions(false);
+  };
+
+  const handleLogicalDelete = async () => {
+    if (!id || !student) return;
+    try {
+      setDeleteActionLoading(true);
+      await dataService.bajaLogicaEstudiante(id);
+      setStudent(prev => (prev ? { ...prev, activo: false } : prev));
+      setShowDeleteOptions(false);
+      alert('Baja lógica aplicada correctamente. El estudiante quedó inactivo.');
+    } catch (error: any) {
+      alert(error?.message || 'Error al aplicar la baja lógica del estudiante.');
+    } finally {
+      setDeleteActionLoading(false);
+    }
+  };
+
+  const handleRealDelete = async () => {
+    if (!id || !student) return;
+
+    const confirmationText = prompt('Para confirmar la baja real, escriba ELIMINAR');
+    if (confirmationText !== 'ELIMINAR') {
+      alert('Baja real cancelada. Debe escribir ELIMINAR exactamente.');
+      return;
+    }
+
+    try {
+      setDeleteActionLoading(true);
+      await dataService.eliminarEstudiante(id);
+      setShowDeleteOptions(false);
+      alert('Estudiante eliminado correctamente.');
+      navigate('/dashboard');
+    } catch (error: any) {
+      alert(error?.message || 'Error al eliminar el estudiante.');
+    } finally {
+      setDeleteActionLoading(false);
     }
   };
 
@@ -423,6 +468,14 @@ const StudentProfile: React.FC = () => {
                    <button className="flex-1 md:flex-none h-10 px-5 bg-[#232f48] hover:bg-[#2c3b59] text-white text-sm font-semibold rounded-lg transition-colors border border-white/5">
                       Contactar
                    </button>
+                   {!isStudent && (
+                     <button
+                       onClick={() => setShowDeleteOptions(true)}
+                       className="flex-1 md:flex-none h-10 px-5 bg-red-600/20 hover:bg-red-600/30 text-red-300 text-sm font-semibold rounded-lg transition-colors border border-red-500/30 flex items-center justify-center gap-2"
+                     >
+                       <Trash2 size={16} /> Baja
+                     </button>
+                   )}
                 </div>
               </div>
             </div>
@@ -756,6 +809,47 @@ const StudentProfile: React.FC = () => {
               <p className="text-center text-[#92a4c9] text-sm mt-4">
                 Apunte la cámara al código QR del instrumento
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteOptions && student && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-border-dark bg-[#111722] p-6 shadow-2xl">
+            <h3 className="text-xl font-bold text-white">Opciones de baja</h3>
+            <p className="mt-2 text-sm text-[#92a4c9]">
+              Selecciona qué hacer con {student.nombre} {student.apellido}.
+            </p>
+
+            <div className="mt-6 space-y-3">
+              <button
+                onClick={handleLogicalDelete}
+                disabled={deleteActionLoading}
+                className="w-full rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-left text-amber-300 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <span className="block font-bold">Baja lógica</span>
+                <span className="block text-sm">Marca al estudiante como inactivo usando /estudiante/baja.</span>
+              </button>
+
+              <button
+                onClick={handleRealDelete}
+                disabled={deleteActionLoading}
+                className="w-full rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-left text-red-300 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <span className="block font-bold">Baja real</span>
+                <span className="block text-sm">Elimina definitivamente al estudiante usando /estudiante/delete.</span>
+              </button>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={closeDeleteModal}
+                disabled={deleteActionLoading}
+                className="rounded-lg px-4 py-2 text-[#92a4c9] transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancelar
+              </button>
             </div>
           </div>
         </div>

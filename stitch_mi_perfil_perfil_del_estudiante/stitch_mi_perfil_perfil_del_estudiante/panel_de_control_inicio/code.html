@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Panel de Control - Orquesta</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2b6cee",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "card-dark": "#192233",
+                        "text-secondary": "#92a4c9",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for modern feel */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #101622; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #232f48; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2b6cee; 
+        }
+        
+        .glass-panel {
+            background: rgba(25, 34, 51, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-white font-display h-screen flex overflow-hidden selection:bg-primary selection:text-white">
+<!-- Sidebar -->
+<aside class="w-20 lg:w-64 flex-shrink-0 flex flex-col border-r border-white/5 bg-[#111722] h-full transition-all duration-300">
+<div class="p-4 lg:p-6 flex flex-col gap-6 h-full">
+<!-- Logo Area (Mobile simplified, Desktop full) -->
+<div class="flex items-center gap-3 px-2">
+<div class="size-8 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[20px]">music_note</span>
+</div>
+<span class="text-xl font-bold tracking-tight hidden lg:block">Opus<span class="text-primary">Manager</span></span>
+</div>
+<!-- Profile Snippet -->
+<div class="flex gap-3 items-center p-2 rounded-xl bg-[#192233]/50 border border-white/5 hover:bg-[#192233] transition cursor-pointer group">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 shrink-0 border-2 border-primary/20 group-hover:border-primary transition" data-alt="Portrait of a young student musician smiling" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCJbUVUkeGT1swhUX_FwUj5sN26E52S-Hcq_TD2hNfPyxrW8hvmL_emiaAXRPRR2FIC_6hoY_AWogLVvjQuj4rHRChVM-EdXg-QzApcMl9OMD1ZD4uo27jyyl-pYrc4b3GGjltYZ8sIJZWb_vrmkMKynsO_JWU5qFmi7Dy1cAS4hbQ7eLqRmYZP1erOmZme_EM1Lsq8B_yc53pTu19Y9qH2FfWD5W5aW_SJRLdjLwt6TL7XMfThk0NStl4IZN3j4YwskXQp9bQxMAxT");'>
+</div>
+<div class="hidden lg:flex flex-col overflow-hidden">
+<h1 class="text-white text-sm font-medium leading-normal truncate">Alex M.</h1>
+<p class="text-text-secondary text-xs font-normal leading-normal truncate">Violín II</p>
+</div>
+</div>
+<!-- Navigation -->
+<div class="flex flex-col gap-2 flex-1 overflow-y-auto">
+<a class="flex items-center gap-3 px-3 py-3 rounded-xl bg-primary shadow-[0_0_15px_rgba(43,108,238,0.3)] group transition-all" href="#">
+<span class="material-symbols-outlined text-white group-hover:scale-110 transition-transform">home</span>
+<p class="text-white text-sm font-medium leading-normal hidden lg:block">Inicio</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-[#192233] text-text-secondary hover:text-white transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">library_music</span>
+<p class="text-sm font-medium leading-normal hidden lg:block">Repertorio</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-[#192233] text-text-secondary hover:text-white transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">calendar_month</span>
+<p class="text-sm font-medium leading-normal hidden lg:block">Calendario</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-[#192233] text-text-secondary hover:text-white transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">group</span>
+<p class="text-sm font-medium leading-normal hidden lg:block">Miembros</p>
+</a>
+<div class="mt-auto">
+<a class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-[#192233] text-text-secondary hover:text-white transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:rotate-90 transition-transform">settings</span>
+<p class="text-sm font-medium leading-normal hidden lg:block">Ajustes</p>
+</a>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 h-full overflow-y-auto bg-background-dark relative">
+<!-- Background Ambient Glow -->
+<div class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-[#192233] to-transparent pointer-events-none opacity-50 z-0"></div>
+<div class="absolute -top-20 right-20 w-96 h-96 bg-primary/10 rounded-full blur-[100px] pointer-events-none z-0"></div>
+<div class="relative z-10 max-w-7xl mx-auto p-4 md:p-8 flex flex-col gap-8 pb-20">
+<!-- Welcome Header -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+<div class="flex flex-col gap-2">
+<h2 class="text-text-secondary text-sm uppercase tracking-wider font-semibold">Panel de Estudiante</h2>
+<h1 class="text-3xl md:text-5xl font-bold text-white tracking-tight">Hola, Alex 👋</h1>
+<p class="text-text-secondary text-base md:text-lg">Tienes <span class="text-white font-bold">2 ensayos</span> y <span class="text-primary font-bold">3 tareas</span> esta semana.</p>
+</div>
+<!-- Music Player Widget (Mini) -->
+<div class="glass-panel p-3 rounded-full flex items-center gap-4 pr-6 shadow-lg animate-fade-in-up">
+<div class="bg-primary/20 p-2 rounded-full text-primary animate-pulse">
+<span class="material-symbols-outlined">graphic_eq</span>
+</div>
+<div class="flex flex-col">
+<span class="text-xs text-text-secondary font-medium">Escuchando ahora</span>
+<span class="text-sm text-white font-bold">Symphony No. 5 - Mvt 1</span>
+</div>
+<button class="size-8 rounded-full bg-white text-background-dark flex items-center justify-center hover:scale-105 transition">
+<span class="material-symbols-outlined text-[20px]">play_arrow</span>
+</button>
+</div>
+</div>
+<!-- Dashboard Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Main Column (Events & Announcements) -->
+<div class="lg:col-span-2 flex flex-col gap-8">
+<!-- Next Event Section -->
+<div class="flex flex-col gap-4">
+<div class="flex flex-wrap justify-between gap-3 items-end">
+<div class="flex flex-col gap-1">
+<h2 class="text-white tracking-tight text-2xl font-bold leading-tight">Próximo Ensayo</h2>
+<p class="text-text-secondary text-sm font-normal">Faltan 2 días para el Gran Concierto</p>
+</div>
+<button class="hidden sm:flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-[#232f48] hover:bg-[#2d3b55] text-white text-sm font-medium transition-colors">
+<span class="truncate">Ver calendario completo</span>
+</button>
+</div>
+<!-- Main Event Card -->
+<div class="glass-panel rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 group">
+<div class="flex flex-col md:flex-row items-stretch">
+<div class="w-full md:w-1/3 bg-center bg-no-repeat bg-cover min-h-[200px] relative" data-alt="Orchestra performing on a stage with dramatic lighting" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAFkcas2q_-amtt7Mw-KT64hv7iPlfdHcWDRVEtJa5C5bqnYt5ggSbjdZXtXbER_DqcVtDG6jDTbN55j60Y-M3GSMWngwPXhJktq-o91L4pP1MyKEaVK60SqCOR9vthZoydb9mQQXYplATiFVsinzSJv_u3_iEm1fVXnfYEJN8Iiop_nLlNt4HhJh1jdA_Wq904ckQl0-pocvBFevGMwFTRw7c1lrCsmMZ1I38chnjI1EUhaobWyagVfpr1O24D2q5UnMYv5Ax225Q5");'>
+<div class="absolute inset-0 bg-gradient-to-t from-[#192233] md:bg-gradient-to-r md:from-transparent md:to-[#192233]"></div>
+</div>
+<div class="flex-1 p-6 flex flex-col justify-center gap-4">
+<div class="flex justify-between items-start">
+<div class="bg-primary/20 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Ensayo General</div>
+<span class="text-white/60 text-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+                                            Auditorio Principal
+                                        </span>
+</div>
+<div>
+<h3 class="text-white text-2xl font-bold leading-tight mb-2">Concierto de Primavera</h3>
+<div class="flex items-center gap-4 text-text-secondary">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">schedule</span>
+<span>16:00 - 19:00</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+<span>Viernes 14</span>
+</div>
+</div>
+</div>
+<div class="h-px w-full bg-white/10"></div>
+<div class="flex flex-col sm:flex-row gap-3 items-center justify-between">
+<p class="text-sm text-text-secondary italic">Traer atril y partituras completas.</p>
+<button class="w-full sm:w-auto flex items-center justify-center gap-2 rounded-lg h-10 px-6 bg-primary hover:bg-blue-600 text-white text-sm font-bold shadow-lg shadow-blue-900/20 transition-all active:scale-95">
+<span>Confirmar asistencia</span>
+<span class="material-symbols-outlined text-[18px]">check</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Announcements Carousel -->
+<div class="flex flex-col gap-4">
+<div class="flex justify-between items-center px-1">
+<h2 class="text-white tracking-tight text-xl font-bold">Avisos Importantes</h2>
+<div class="flex gap-2">
+<button class="size-8 rounded-full bg-[#232f48] hover:bg-[#2d3b55] flex items-center justify-center text-white transition"><span class="material-symbols-outlined text-sm">arrow_back</span></button>
+<button class="size-8 rounded-full bg-[#232f48] hover:bg-[#2d3b55] flex items-center justify-center text-white transition"><span class="material-symbols-outlined text-sm">arrow_forward</span></button>
+</div>
+</div>
+<div class="flex overflow-x-auto gap-4 pb-4 snap-x [-ms-overflow-style:none] [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden">
+<!-- Card 1 -->
+<div class="min-w-[280px] snap-center glass-panel p-4 rounded-xl flex flex-col gap-3 hover:-translate-y-1 transition duration-300">
+<div class="w-full h-32 bg-center bg-cover rounded-lg relative overflow-hidden" data-alt="Close up of fabric measuring tape" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDaA1B9TX0Ql0AsqFfsupOYQZCgrALf14udzkpr__H8iGwqZPBoe5qCCWD7Ly5fPDsFUhSzo6YgXsjwwvKNTC_PPJnSwHC8CZS-SaiXF8ryl4A8d76AJkNaalO6pqLQUKKtOD58sKjwrpUOoVBr665sYDgyhKlXtgV4wJ9uvaF2QNESHMo9HHvqTyNEEm24feeDt_Tsb13HVRQ2rB3p3fsPTZQMPdsj4FJQcMrojg-AnDzDgojIuBVe-GyB2vdFgf-lBzQC3ykVqB1x");'>
+<div class="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">URGENTE</div>
+</div>
+<div>
+<h4 class="text-white text-base font-bold">Medidas de Uniforme</h4>
+<p class="text-text-secondary text-sm mt-1 line-clamp-2">Favor de pasar a la oficina antes del viernes para la toma de tallas.</p>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="min-w-[280px] snap-center glass-panel p-4 rounded-xl flex flex-col gap-3 hover:-translate-y-1 transition duration-300">
+<div class="w-full h-32 bg-center bg-cover rounded-lg relative overflow-hidden" data-alt="Sheet music pages piled up" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCaWMk3OpHsh0DfXZ7FLEpCR_2FHNIikq6XhGc1p_eKMY5UDrJ1aFdNPBdzZnRYsJihOKx29B4dudcLmIJV-RAqAoUXbR6NxBzLifej73WqyG85UZ0_Gam4n8JwqIPkL0O9YxdsW7a3fCchFJFRxXmwtTu7ydBpvkwqqlrvUwvsh-koVvcBHNpoVRV15Si5f2WPSQkqKcW2JrzqgsLry7hEk7mcxlwza2evoDvTKV_6EeDxGwJJySsOFcCaLpA6KSWxLKUrr38Kk8fL");'>
+<div class="absolute top-2 left-2 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">NUEVO</div>
+</div>
+<div>
+<h4 class="text-white text-base font-bold">Nuevas Partituras</h4>
+<p class="text-text-secondary text-sm mt-1 line-clamp-2">Ya disponibles en PDF el repertorio para el ciclo de invierno.</p>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="min-w-[280px] snap-center glass-panel p-4 rounded-xl flex flex-col gap-3 hover:-translate-y-1 transition duration-300">
+<div class="w-full h-32 bg-center bg-cover rounded-lg relative overflow-hidden" data-alt="Bus transportation abstract view" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDDNv0E6jTcy0cI_GtBKFUq2hBfV2Wj2-VE4aT7RfvikfN5F1GdDKbpPDac01gPkesDzSFCKas1VUnjZgOK1exMmRXel8KzwHIDD0RjWPuFhP0pVDZzl4jzfjDqo9vX9jKPwqgIO5-mtp3SbuZvOK60KE6eHfqMxIc1f19BV4SdK0j-wL7esTMzLMVjIXkjkC3cW_uponJ9pm2sYZ2XhryL5K72Oowb0jwWDnDRsmda-n76hoV0WVfMqdT2VHinJgsKNSInDLfuRzFu");'>
+</div>
+<div>
+<h4 class="text-white text-base font-bold">Transporte Gira</h4>
+<p class="text-text-secondary text-sm mt-1 line-clamp-2">Horarios de salida confirmados para el viaje a la ciudad vecina.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column (Tasks & Quick Links) -->
+<div class="flex flex-col gap-6">
+<!-- Tasks Widget -->
+<div class="glass-panel rounded-2xl p-5 flex flex-col h-full min-h-[400px]">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-white font-bold text-lg">Tareas Pendientes</h2>
+<span class="bg-primary/20 text-primary text-xs font-bold px-2 py-1 rounded">3 Activas</span>
+</div>
+<div class="flex flex-col gap-3 flex-1">
+<!-- Task Item -->
+<div class="group flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition cursor-pointer border border-transparent hover:border-white/5">
+<div class="mt-0.5 relative">
+<input class="peer appearance-none size-5 border-2 border-text-secondary rounded bg-transparent checked:bg-primary checked:border-primary transition cursor-pointer" type="checkbox"/>
+<span class="material-symbols-outlined absolute top-0 left-0 text-white text-[18px] opacity-0 peer-checked:opacity-100 pointer-events-none">check</span>
+</div>
+<div class="flex flex-col">
+<span class="text-white text-sm font-medium group-hover:text-primary transition-colors">Practicar compases 45-90</span>
+<span class="text-text-secondary text-xs">Symphony No. 5</span>
+</div>
+</div>
+<!-- Task Item -->
+<div class="group flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition cursor-pointer border border-transparent hover:border-white/5">
+<div class="mt-0.5 relative">
+<input class="peer appearance-none size-5 border-2 border-text-secondary rounded bg-transparent checked:bg-primary checked:border-primary transition cursor-pointer" type="checkbox"/>
+<span class="material-symbols-outlined absolute top-0 left-0 text-white text-[18px] opacity-0 peer-checked:opacity-100 pointer-events-none">check</span>
+</div>
+<div class="flex flex-col">
+<span class="text-white text-sm font-medium group-hover:text-primary transition-colors">Subir permiso firmado</span>
+<span class="text-red-400 text-xs font-medium">Vence hoy</span>
+</div>
+</div>
+<!-- Task Item -->
+<div class="group flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition cursor-pointer border border-transparent hover:border-white/5">
+<div class="mt-0.5 relative">
+<input class="peer appearance-none size-5 border-2 border-text-secondary rounded bg-transparent checked:bg-primary checked:border-primary transition cursor-pointer" type="checkbox"/>
+<span class="material-symbols-outlined absolute top-0 left-0 text-white text-[18px] opacity-0 peer-checked:opacity-100 pointer-events-none">check</span>
+</div>
+<div class="flex flex-col">
+<span class="text-white text-sm font-medium group-hover:text-primary transition-colors">Pago de cuota semestral</span>
+<span class="text-text-secondary text-xs">Administración</span>
+</div>
+</div>
+</div>
+<button class="w-full mt-4 py-2 border border-white/10 rounded-lg text-text-secondary text-sm hover:text-white hover:bg-white/5 transition">
+                            + Añadir tarea personal
+                        </button>
+</div>
+<!-- Quick Actions Grid -->
+<div class="grid grid-cols-2 gap-3">
+<button class="bg-[#232f48] hover:bg-primary/80 hover:scale-[1.02] transition-all p-4 rounded-xl flex flex-col items-center justify-center gap-2 text-center group h-28">
+<span class="material-symbols-outlined text-3xl text-primary group-hover:text-white transition-colors">download</span>
+<span class="text-white text-xs font-medium">Descargar<br/>Partituras</span>
+</button>
+<button class="bg-[#232f48] hover:bg-primary/80 hover:scale-[1.02] transition-all p-4 rounded-xl flex flex-col items-center justify-center gap-2 text-center group h-28">
+<span class="material-symbols-outlined text-3xl text-primary group-hover:text-white transition-colors">forum</span>
+<span class="text-white text-xs font-medium">Chat de<br/>Sección</span>
+</button>
+<button class="bg-[#232f48] hover:bg-primary/80 hover:scale-[1.02] transition-all p-4 rounded-xl flex flex-col items-center justify-center gap-2 text-center group h-28 col-span-2">
+<span class="material-symbols-outlined text-3xl text-primary group-hover:text-white transition-colors">history_edu</span>
+<span class="text-white text-xs font-medium">Reportar Ausencia</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
