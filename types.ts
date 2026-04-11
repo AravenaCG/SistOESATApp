@@ -149,6 +149,45 @@ export interface InventoryItem {
   detail?: string; // New field for QR
 }
 
+export type CalendarEventType = 'ensayo' | 'concierto' | 'social' | 'seccional';
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  subtitle?: string;
+  type: CalendarEventType;
+  start: string;
+  end?: string;
+  location: string;
+  tag?: string;
+  attendees: string[];
+  courseId?: number | null;
+  description?: string;
+}
+
+export interface EventQueryParams {
+  month?: string;
+  type?: CalendarEventType;
+  courseId?: number;
+}
+
+export interface CreateCalendarEventDto {
+  title: string;
+  subtitle?: string;
+  type: CalendarEventType;
+  start: string;
+  end?: string;
+  location: string;
+  tag?: string;
+  attendees?: string[];
+  courseId?: number | null;
+  description?: string;
+}
+
+export interface UpdateCalendarEventDto extends CreateCalendarEventDto {
+  id: string;
+}
+
 export enum InstrumentType {
   Violin = 1,
   Flauta = 2,

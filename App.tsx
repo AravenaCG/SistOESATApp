@@ -7,6 +7,7 @@ import StudentProfile from './components/StudentProfile';
 import CourseManager from './components/CourseManager';
 import CourseDetail from './components/CourseDetail'; // Import new component
 import InstrumentManager from './components/InstrumentManager';
+import EventCalendar from './components/EventCalendar';
 import PrivateRoute from './components/PrivateRoute';
 
 const App: React.FC = () => {
@@ -58,6 +59,14 @@ const App: React.FC = () => {
             </PrivateRoute>
           } 
         />
+          <Route 
+            path="/calendario" 
+            element={
+              <PrivateRoute>
+                <EventCalendar />
+              </PrivateRoute>
+            } 
+          />
 
         {/* Redirects */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

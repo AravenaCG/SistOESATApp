@@ -1,5 +1,12 @@
 import { API_AUTH_URL, API_DATA_URL } from '../constants';
-import { AuthResponse, SaveAttendanceDto } from '../types';
+import {
+  AuthResponse,
+  SaveAttendanceDto,
+  CalendarEvent,
+  CreateCalendarEventDto,
+  UpdateCalendarEventDto,
+  EventQueryParams,
+} from '../types';
 
 const CONFIGURED_DATA_BASE = import.meta.env.VITE_API_DATA_BASE_URL as string | undefined;
 const API_DATA_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
@@ -239,6 +246,59 @@ export const dataService = {
         return [];
       }
       throw error;
+    }
+  },
+
+  // Calendar/Event Endpoints
+  getEventos: async (params?: EventQueryParams): Promise<CalendarEvent[]> => {
+    const queryParams = new URLSearchParams();
+    if (params?.month) queryParams.set('month', params.month);
+    if (params?.type) queryParams.set('type', params.type);
+    if (params?.courseId) queryParams.set('courseId', String(params.courseId));
+
+    const query = queryParams.toString();
+
+    try {
+      const data = await dataService.request(`/eventos${query ? `?${query}` : ''}`, 'GET');
+      if (Array.isArray(data)) return data as CalendarEvent[];
+
+      const wrapped = data as any;
+      if (Array.isArray(wrapped?.result)) return wrapped.result as CalendarEvent[];
+      if (Array.isArray(wrapped?.Result)) return wrapped.Result as CalendarEvent[];
+      if (Array.isArray(wrapped?.value)) return wrapped.value as CalendarEvent[];
+      if (Array.isArray(wrapped?.Value)) return wrapped.Value as CalendarEvent[];
+      return [];
+    } catch {
+      // Stub/fallback until backend exists.
+      return [];
+    }
+  },
+
+  createEvento: async (dto: CreateCalendarEventDto): Promise<CalendarEvent | null> => {
+    try {
+      return await dataService.request('/evento/save', 'POST', dto);
+    } catch {
+      // Stub until backend is implemented.
+      return null;
+    }
+  },
+
+  updateEvento: async (id: string, dto: UpdateCalendarEventDto): Promise<CalendarEvent | null> => {
+    try {
+      return await dataService.request(`/evento/update/${id}`, 'PUT', dto);
+    } catch {
+      // Stub until backend is implemented.
+      return null;
+    }
+  },
+
+  deleteEvento: async (id: string): Promise<boolean> => {
+    try {
+      await dataService.request(`/evento/delete/${id}`, 'DELETE');
+      return true;
+    } catch {
+      // Stub until backend is implemented.
+      return false;
     }
   }
 };

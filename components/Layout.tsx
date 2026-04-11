@@ -6,6 +6,7 @@ import {
   Users, 
   Music, 
   Guitar, 
+  CalendarDays,
   LogOut, 
   Menu,
   X
@@ -30,6 +31,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         { path: '/dashboard', label: 'Estudiantes', icon: <Users size={20} /> },
         { path: '/cursos', label: 'Cursos', icon: <Music size={20} /> },
         { path: '/instrumentos', label: 'Instrumentos', icon: <Guitar size={20} /> },
+        { path: '/calendario', label: 'Calendario', icon: <CalendarDays size={20} /> },
       ];
 
   const handleLogout = () => {
