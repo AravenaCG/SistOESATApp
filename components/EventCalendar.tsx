@@ -244,7 +244,6 @@ const EventCalendar: React.FC = () => {
 
   const monthCells = buildMonthCells(visibleMonth);
   const weekCells = buildWeekCells(visibleMonth);
-  const mockEvents = buildMockEvents(visibleMonth);
   const monthKey = `${visibleMonth.getFullYear()}-${String(visibleMonth.getMonth() + 1).padStart(2, '0')}`;
   const weekRangeLabel = `${dayFormatter.format(weekCells[0])} - ${dayFormatter.format(weekCells[6])}`;
 
@@ -253,22 +252,15 @@ const EventCalendar: React.FC = () => {
 
     const loadEvents = async () => {
       setLoadingEvents(true);
-
       try {
         const apiEvents = await dataService.getEventos({ month: monthKey });
         if (cancelled) return;
-
-        if (Array.isArray(apiEvents) && apiEvents.length > 0) {
-          setEvents(apiEvents.map(toViewModel));
-          setUsingMockData(false);
-        } else {
-          setEvents(mockEvents);
-          setUsingMockData(true);
-        }
+        setEvents(Array.isArray(apiEvents) ? apiEvents.map(toViewModel) : []);
+        setUsingMockData(false);
       } catch {
         if (cancelled) return;
-        setEvents(mockEvents);
-        setUsingMockData(true);
+        setEvents([]);
+        setUsingMockData(false);
       } finally {
         if (!cancelled) {
           setLoadingEvents(false);
@@ -289,6 +281,7 @@ const EventCalendar: React.FC = () => {
   const sortedUpcomingEvents = [...visibleEvents].sort((left, right) => left.start.getTime() - right.start.getTime());
   const highlightedEvent = sortedUpcomingEvents[0] || null;
   const upcomingEvents = sortedUpcomingEvents.slice(0, 3);
+  // selectedDayEvents: eventos del día visible (en modo día)
   const selectedDayEvents = visibleEvents
     .filter((event) => sameDay(event.start, visibleMonth))
     .sort((left, right) => left.start.getTime() - right.start.getTime());
@@ -311,8 +304,27 @@ const EventCalendar: React.FC = () => {
     const nextStart = new Date(targetDate);
     nextStart.setHours(targetHour ?? originalStart.getHours(), originalStart.getMinutes(), 0, 0);
 
-    const durationMs = originalEnd ? originalEnd.getTime() - originalStart.getTime() : 0;
-    const nextEnd = durationMs > 0 ? new Date(nextStart.getTime() + durationMs) : undefined;
+    let nextEnd: Date | undefined = undefined;
+    if (originalEnd) {
+      // Si el evento original era multiday, mantener la duración; si no, mantener la hora de fin en el mismo día
+      const originalDuration = originalEnd.getTime() - originalStart.getTime();
+      if (
+        originalStart.getFullYear() !== originalEnd.getFullYear() ||
+        originalStart.getMonth() !== originalEnd.getMonth() ||
+        originalStart.getDate() !== originalEnd.getDate()
+      ) {
+        // Evento multiday: mantener duración
+        nextEnd = new Date(nextStart.getTime() + originalDuration);
+      } else {
+        // Evento de un solo día: mantener la misma duración pero forzar que termine el mismo día
+        nextEnd = new Date(nextStart);
+        nextEnd.setHours(originalEnd.getHours(), originalEnd.getMinutes(), 0, 0);
+        if (nextEnd < nextStart) {
+          // Si la hora de fin es anterior a la de inicio, sumar 1 hora por defecto
+          nextEnd = new Date(nextStart.getTime() + 60 * 60 * 1000);
+        }
+      }
+    }
 
     const movedEvent: CalendarEventViewModel = {
       ...eventToMove,
@@ -344,8 +356,6 @@ const EventCalendar: React.FC = () => {
         .map((event) => (event.id === eventToMove.id ? persisted : event))
         .sort((a, b) => a.start.getTime() - b.start.getTime()));
       setUsingMockData(false);
-    } else {
-      setUsingMockData(true);
     }
   };
 
@@ -613,13 +623,11 @@ const EventCalendar: React.FC = () => {
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#232f48] bg-[#151b28] px-4 py-3 text-sm text-[#92a4c9]">
             <div className="flex items-center gap-2">
-              {loadingEvents ? <Loader2 size={16} className="animate-spin" /> : usingMockData ? <AlertCircle size={16} className="text-amber-400" /> : <Check size={16} className="text-emerald-400" />}
+              {loadingEvents ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} className="text-emerald-400" />}
               <span>
                 {loadingEvents
                   ? 'Cargando eventos...'
-                  : usingMockData
-                    ? 'Mostrando datos mock porque el backend de eventos todavía no devuelve datos.'
-                    : 'Mostrando eventos desde backend.'}
+                  : 'Mostrando eventos desde backend.'}
               </span>
             </div>
             <span className="text-xs uppercase tracking-wider text-[#6f7f9f]">Vista: {viewMode === 'month' ? `Mes ${monthKey}` : viewMode === 'week' ? `Semana ${weekRangeLabel}` : `Día ${dayFormatter.format(visibleMonth)}`}</span>
@@ -707,9 +715,15 @@ const EventCalendar: React.FC = () => {
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                          {dayEvents.slice(0, 2).map((event) => renderEventCard(event, event.tag === 'Tutti' || event.type === 'concierto'))}
-                          {dayEvents.length > 2 && (
-                            <span className="text-xs font-bold text-[#92a4c9]">+{dayEvents.length - 2} más</span>
+                          {dayEvents.length > 0 ? (
+                            <>
+                              {dayEvents.slice(0, 2).map((event) => renderEventCard(event, event.tag === 'Tutti' || event.type === 'concierto'))}
+                              {dayEvents.length > 2 && (
+                                <span className="text-xs font-bold text-[#92a4c9]">+{dayEvents.length - 2} más</span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-xs text-[#6f7f9f]">Sin eventos</span>
                           )}
                         </div>
                       </div>
