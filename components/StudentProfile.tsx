@@ -1,4 +1,63 @@
 import React, { useEffect, useState } from 'react';
+import { X as CloseIcon } from 'lucide-react';
+// Editable fields for the edit modal (excluding courses)
+const editableFields: Array<{ key: keyof Student; label: string; type?: string; required?: boolean }> = [
+  { key: 'nombre', label: 'Nombre', required: true },
+  { key: 'apellido', label: 'Apellido', required: true },
+  { key: 'fechaNacimiento', label: 'Fecha de nacimiento', type: 'date', required: true },
+  { key: 'documento', label: 'Documento', required: true },
+  { key: 'email', label: 'Email', type: 'email', required: true },
+  { key: 'telefono', label: 'Teléfono' },
+  { key: 'direccion', label: 'Dirección' },
+  { key: 'nacionalidad', label: 'Nacionalidad' },
+  { key: 'nombreTutor', label: 'Nombre Tutor' },
+  { key: 'telefonoTutor', label: 'Teléfono Tutor' },
+  { key: 'documentoTutor', label: 'Documento Tutor' },
+  { key: 'nombreTutor2', label: 'Nombre Tutor 2' },
+  { key: 'telefonoTutor2', label: 'Teléfono Tutor 2' },
+  { key: 'documentoTutor2', label: 'Documento Tutor 2' },
+  { key: 'tmtMédico', label: 'TMT Médico' },
+  { key: 'epPsicoMotriz', label: 'EP PsicoMotriz' },
+  { key: 'particularidad', label: 'Particularidad' },
+  { key: 'autoretiro', label: 'Autoretiro', type: 'checkbox' },
+];
+  // Edit Modal State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<Student>>({});
+  const [editLoading, setEditLoading] = useState(false);
+  // Open edit modal and prefill form
+  const openEditModal = () => {
+    if (!student) return;
+    setEditForm({ ...student });
+    setShowEditModal(true);
+  };
+
+  // Handle form field changes
+  const handleEditChange = (key: keyof Student, value: any) => {
+    setEditForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // Submit edit form
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!student) return;
+    setEditLoading(true);
+    try {
+      // Only send editable fields
+      const payload: Partial<Student> = {};
+      editableFields.forEach(({ key }) => {
+        if (editForm[key] !== undefined) payload[key] = editForm[key];
+      });
+      await dataService.request(`/estudiante/update/${student.estudianteId}`, 'PUT', payload);
+      setShowEditModal(false);
+      await fetchStudentData();
+      alert('Estudiante actualizado correctamente');
+    } catch (error: any) {
+      alert(error?.message || 'Error al actualizar el estudiante');
+    } finally {
+      setEditLoading(false);
+    }
+  };
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { dataService, authService } from '../services/api';
 import { Student, InstrumentLoan } from '../types';
@@ -442,10 +501,75 @@ const StudentProfile: React.FC = () => {
                   )}
                   
                   {!isStudent && (
-                    <button className="absolute bottom-2 right-2 bg-primary text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-600">
-                       <span className="material-symbols-outlined text-[18px]">edit</span>
+                    <button
+                      type="button"
+                      onClick={openEditModal}
+                      className="absolute bottom-2 right-2 bg-primary text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-600"
+                      title="Editar estudiante"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">edit</span>
                     </button>
                   )}
+                      {/* Edit Student Modal */}
+                      {showEditModal && (
+                        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                          <div className="w-full max-w-lg rounded-2xl border border-border-dark bg-[#111722] p-6 shadow-2xl relative">
+                            <button
+                              onClick={() => setShowEditModal(false)}
+                              className="absolute top-4 right-4 text-[#92a4c9] hover:text-white transition-colors"
+                              disabled={editLoading}
+                              title="Cerrar"
+                            >
+                              <CloseIcon size={22} />
+                            </button>
+                            <h3 className="text-xl font-bold text-white mb-2">Editar estudiante</h3>
+                            <form onSubmit={handleEditSubmit} className="flex flex-col gap-4 mt-4">
+                              {editableFields.map(({ key, label, type, required }) => (
+                                <div key={key as string} className="flex flex-col gap-1">
+                                  <label className="text-[#92a4c9] text-xs font-bold" htmlFor={`edit-${key}`}>{label}</label>
+                                  {type === 'checkbox' ? (
+                                    <input
+                                      id={`edit-${key}`}
+                                      type="checkbox"
+                                      checked={!!editForm[key]}
+                                      onChange={e => handleEditChange(key, e.target.checked)}
+                                      className="size-5"
+                                      disabled={editLoading}
+                                    />
+                                  ) : (
+                                    <input
+                                      id={`edit-${key}`}
+                                      type={type || 'text'}
+                                      value={editForm[key] ?? ''}
+                                      onChange={e => handleEditChange(key, e.target.value)}
+                                      className="rounded-lg border border-border-dark bg-[#101622] px-4 py-2.5 text-white outline-none focus:ring-1 focus:ring-blue-500"
+                                      required={required}
+                                      disabled={editLoading}
+                                    />
+                                  )}
+                                </div>
+                              ))}
+                              <div className="flex gap-3 mt-4">
+                                <button
+                                  type="submit"
+                                  disabled={editLoading}
+                                  className="flex-1 rounded-lg bg-blue-600 px-5 py-2.5 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {editLoading ? 'Guardando...' : 'Guardar cambios'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowEditModal(false)}
+                                  disabled={editLoading}
+                                  className="flex-1 rounded-lg bg-gray-600 px-5 py-2.5 font-bold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            </form>
+                          </div>
+                        </div>
+                      )}
                 </div>
                 
                 <div className="flex-1 flex flex-col gap-2 mb-2">
@@ -473,12 +597,23 @@ const StudentProfile: React.FC = () => {
                       Contactar
                    </button>
                    {!isStudent && (
-                     <button
-                       onClick={() => setShowDeleteOptions(true)}
-                       className="flex-1 md:flex-none h-10 px-5 bg-red-600/20 hover:bg-red-600/30 text-red-300 text-sm font-semibold rounded-lg transition-colors border border-red-500/30 flex items-center justify-center gap-2"
-                     >
-                       <Trash2 size={16} /> Baja
-                     </button>
+                     <>
+                       <button
+                         onClick={() => {
+                           const url = `${window.location.origin}/autoretiro/${student.estudianteId}`;
+                           window.open(url, '_blank');
+                         }}
+                         className="flex-1 md:flex-none h-10 px-5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 text-sm font-semibold rounded-lg transition-colors border border-blue-500/30 flex items-center justify-center gap-2"
+                       >
+                         <span className="material-symbols-outlined text-[18px]">link</span> Actualizar Autoretiro
+                       </button>
+                       <button
+                         onClick={() => setShowDeleteOptions(true)}
+                         className="flex-1 md:flex-none h-10 px-5 bg-red-600/20 hover:bg-red-600/30 text-red-300 text-sm font-semibold rounded-lg transition-colors border border-red-500/30 flex items-center justify-center gap-2"
+                       >
+                         <Trash2 size={16} /> Baja
+                       </button>
+                     </>
                    )}
                 </div>
               </div>

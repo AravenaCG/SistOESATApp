@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
@@ -5,15 +6,18 @@ import RegistrationForm from './components/RegistrationForm';
 import StudentList from './components/StudentList';
 import StudentProfile from './components/StudentProfile';
 import CourseManager from './components/CourseManager';
-import CourseDetail from './components/CourseDetail'; // Import new component
+import CourseDetail from './components/CourseDetail';
 import InstrumentManager from './components/InstrumentManager';
 import EventCalendar from './components/EventCalendar';
 import PrivateRoute from './components/PrivateRoute';
+import AutoretiroConsent from './components/AutoretiroConsent';
 
 const App: React.FC = () => {
   return (
     <HashRouter>
       <Routes>
+        {/* Public route for autoretiro consent */}
+        <Route path="/autoretiro/:id" element={<AutoretiroConsent />} />
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<RegistrationForm />} />
