@@ -23,11 +23,11 @@ const AutoretiroConsent: React.FC = () => {
       return;
     }
     try {
-      await dataService.request(`/estudiante/${id}/autoretiro`, 'POST', {
+      await dataService.request(`/estudiante/update/${id}`, 'PUT', {
         autoretiro: checked,
-        parentNombre: parentNombre.trim(),
-        parentApellido: parentApellido.trim(),
-        parentDni: parentDni.trim(),
+        nombreTutor: parentNombre.trim(),
+        apellidoTutor: parentApellido.trim(),
+        documentoTutor: parentDni.trim(),
       });
       setSuccess(true);
     } catch (err: any) {

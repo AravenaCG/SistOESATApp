@@ -53,10 +53,12 @@ const StudentProfile: React.FC = () => {
       if (!student) return;
       setEditLoading(true);
       try {
-        // Only send editable fields
+        // Only send changed fields (not all fields)
         const payload: Partial<Student> = {};
         editableFields.forEach(({ key }) => {
-          if (editForm[key] !== undefined) payload[key] = editForm[key];
+          if (editForm[key] !== undefined && editForm[key] !== student[key]) {
+            payload[key] = editForm[key];
+          }
         });
         await dataService.request(`/estudiante/update/${student.estudianteId}`, 'PUT', payload);
         setShowEditModal(false);
@@ -524,7 +526,7 @@ const StudentProfile: React.FC = () => {
                               <CloseIcon size={22} />
                             </button>
                             <h3 className="text-xl font-bold text-white mb-2">Editar estudiante</h3>
-                            <form onSubmit={handleEditSubmit} className="flex flex-col gap-4 mt-4">
+                            <form onSubmit={handleEditSubmit} className="flex flex-col gap-4 mt-4 w-full max-h-[70vh] overflow-y-auto">
                               {editableFields.map(({ key, label, type, required }) => (
                                 <div key={key as string} className="flex flex-col gap-1 w-full">
                                   <label className="text-[#92a4c9] text-xs font-bold" htmlFor={`edit-${key}`}>{label}</label>
