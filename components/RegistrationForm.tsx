@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { authService, dataService } from '../services/api';
 import PublicLayout from './PublicLayout';
 import { getInstrumentName } from '../constants';

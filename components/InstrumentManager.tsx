@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Layout from './Layout';
 import { INSTRUMENT_MAP } from '../constants';
 import { StockInstrumento, CreateStockDto } from '../types';

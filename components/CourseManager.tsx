@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { dataService } from '../services/api';
 import { Course } from '../types';
 import Layout from './Layout';

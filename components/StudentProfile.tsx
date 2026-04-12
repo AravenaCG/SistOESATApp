@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X as CloseIcon } from 'lucide-react';
 // Editable fields for the edit modal (excluding courses)
 const editableFields: Array<{ key: keyof Student; label: string; type?: string; required?: boolean }> = [
