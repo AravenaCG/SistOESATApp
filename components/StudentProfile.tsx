@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { X as CloseIcon } from 'lucide-react';
-// Editable fields for the edit modal (excluding courses)
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { dataService, authService } from '../services/api';
+import { Student, InstrumentLoan } from '../types';
+import { getInstrumentName } from '../constants';
+import Layout from './Layout';
+import { Guitar, ArrowRightLeft, Check, AlertCircle, QrCode, X, Plus, Trash2 } from 'lucide-react';
+import { Html5QrcodeScanner } from 'html5-qrcode';
+
 const editableFields: Array<{ key: keyof Student; label: string; type?: string; required?: boolean }> = [
   { key: 'nombre', label: 'Nombre', required: true },
   { key: 'apellido', label: 'Apellido', required: true },
@@ -21,52 +28,46 @@ const editableFields: Array<{ key: keyof Student; label: string; type?: string; 
   { key: 'particularidad', label: 'Particularidad' },
   { key: 'autoretiro', label: 'Autoretiro', type: 'checkbox' },
 ];
-  // Edit Modal State
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<Student>>({});
-  const [editLoading, setEditLoading] = useState(false);
-  // Open edit modal and prefill form
-  const openEditModal = () => {
-    if (!student) return;
-    setEditForm({ ...student });
-    setShowEditModal(true);
-  };
-
-  // Handle form field changes
-  const handleEditChange = (key: keyof Student, value: any) => {
-    setEditForm((prev) => ({ ...prev, [key]: value }));
-  };
-
-  // Submit edit form
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!student) return;
-    setEditLoading(true);
-    try {
-      // Only send editable fields
-      const payload: Partial<Student> = {};
-      editableFields.forEach(({ key }) => {
-        if (editForm[key] !== undefined) payload[key] = editForm[key];
-      });
-      await dataService.request(`/estudiante/update/${student.estudianteId}`, 'PUT', payload);
-      setShowEditModal(false);
-      await fetchStudentData();
-      alert('Estudiante actualizado correctamente');
-    } catch (error: any) {
-      alert(error?.message || 'Error al actualizar el estudiante');
-    } finally {
-      setEditLoading(false);
-    }
-  };
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { dataService, authService } from '../services/api';
-import { Student, InstrumentLoan } from '../types';
-import { getInstrumentName } from '../constants';
-import Layout from './Layout';
-import { Guitar, ArrowRightLeft, Check, AlertCircle, QrCode, X, Plus, Trash2 } from 'lucide-react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
 
 const StudentProfile: React.FC = () => {
+    // Edit Modal State (must be inside component)
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editForm, setEditForm] = useState<Partial<Student>>({});
+    const [editLoading, setEditLoading] = useState(false);
+
+    // Open edit modal and prefill form
+    const openEditModal = () => {
+      if (!student) return;
+      setEditForm({ ...student });
+      setShowEditModal(true);
+    };
+
+    // Handle form field changes
+    const handleEditChange = (key: keyof Student, value: any) => {
+      setEditForm((prev) => ({ ...prev, [key]: value }));
+    };
+
+    // Submit edit form
+    const handleEditSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!student) return;
+      setEditLoading(true);
+      try {
+        // Only send editable fields
+        const payload: Partial<Student> = {};
+        editableFields.forEach(({ key }) => {
+          if (editForm[key] !== undefined) payload[key] = editForm[key];
+        });
+        await dataService.request(`/estudiante/update/${student.estudianteId}`, 'PUT', payload);
+        setShowEditModal(false);
+        await fetchStudentData();
+        alert('Estudiante actualizado correctamente');
+      } catch (error: any) {
+        alert(error?.message || 'Error al actualizar el estudiante');
+      } finally {
+        setEditLoading(false);
+      }
+    };
   const { id } = useParams();
   const navigate = useNavigate();
   const [student, setStudent] = useState<Student | null>(null);
