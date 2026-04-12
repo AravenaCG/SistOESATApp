@@ -513,8 +513,8 @@ const StudentProfile: React.FC = () => {
                   )}
                       {/* Edit Student Modal */}
                       {showEditModal && (
-                        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-                          <div className="w-full max-w-lg rounded-2xl border border-border-dark bg-[#111722] p-6 shadow-2xl relative">
+                        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto">
+                          <div className="w-full max-w-lg rounded-2xl border border-border-dark bg-[#111722] p-4 sm:p-6 shadow-2xl relative flex flex-col">
                             <button
                               onClick={() => setShowEditModal(false)}
                               className="absolute top-4 right-4 text-[#92a4c9] hover:text-white transition-colors"
@@ -526,7 +526,7 @@ const StudentProfile: React.FC = () => {
                             <h3 className="text-xl font-bold text-white mb-2">Editar estudiante</h3>
                             <form onSubmit={handleEditSubmit} className="flex flex-col gap-4 mt-4">
                               {editableFields.map(({ key, label, type, required }) => (
-                                <div key={key as string} className="flex flex-col gap-1">
+                                <div key={key as string} className="flex flex-col gap-1 w-full">
                                   <label className="text-[#92a4c9] text-xs font-bold" htmlFor={`edit-${key}`}>{label}</label>
                                   {type === 'checkbox' ? (
                                     <input
@@ -543,14 +543,14 @@ const StudentProfile: React.FC = () => {
                                       type={type || 'text'}
                                       value={editForm[key] ?? ''}
                                       onChange={e => handleEditChange(key, e.target.value)}
-                                      className="rounded-lg border border-border-dark bg-[#101622] px-4 py-2.5 text-white outline-none focus:ring-1 focus:ring-blue-500"
+                                      className="rounded-lg border border-border-dark bg-[#101622] px-4 py-2.5 text-white outline-none focus:ring-1 focus:ring-blue-500 w-full"
                                       required={required}
                                       disabled={editLoading}
                                     />
                                   )}
                                 </div>
                               ))}
-                              <div className="flex gap-3 mt-4">
+                              <div className="flex flex-col sm:flex-row gap-3 mt-4 w-full">
                                 <button
                                   type="submit"
                                   disabled={editLoading}
