@@ -37,9 +37,13 @@ export interface DevolverPrestamoDto {
   stockInstrumentoId: number;
 }
 
+
+// Estado extendido: 'presente' | 'ausente' | 'ausente_con_aviso'
 export interface AttendanceItemDto {
   estudianteId: string;
   presente: boolean;
+  estadoAsistencia?: 'presente' | 'ausente' | 'ausente_con_aviso';
+  observacion?: string;
 }
 
 export interface SaveAttendanceDto {

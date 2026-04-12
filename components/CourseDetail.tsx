@@ -24,7 +24,8 @@ const CourseDetail: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAttendanceMode, setIsAttendanceMode] = useState(false);
-  const [attendance, setAttendance] = useState<Record<string, boolean>>({});
+  // attendance: { [estudianteId]: { estado: 'presente'|'ausente'|'ausente_con_aviso', observacion: string } }
+  const [attendance, setAttendance] = useState<Record<string, { estado: 'presente' | 'ausente' | 'ausente_con_aviso'; observacion: string }>>({});
   const [saving, setSaving] = useState(false);
   const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -124,12 +125,16 @@ const CourseDetail: React.FC = () => {
     }
   };
 
+  // Ya no se usa directamente, pero se puede dejar para compatibilidad
   const toggleAttendance = (studentId: string) => {
     setAttendance(prev => ({
       ...prev,
-      [studentId]: !prev[studentId]
+      [studentId]: {
+        ...prev[studentId],
+        estado: prev[studentId]?.estado === 'presente' ? 'ausente' : 'presente'
+      }
     }));
-  };
+  } 
 
   const handleSaveAttendance = async () => {
     if (!id) return;
@@ -139,9 +144,11 @@ const CourseDetail: React.FC = () => {
       const attendanceData: SaveAttendanceDto = {
         cursoId: id,
         fecha: new Date().toISOString(),
-        asistencias: Object.entries(attendance).map(([estudianteId, presente]) => ({
+        asistencias: Object.entries(attendance).map(([estudianteId, value]) => ({
           estudianteId,
-          presente
+          presente: value.estado === 'presente',
+          estadoAsistencia: value.estado,
+          observacion: value.observacion
         }))
       };
 
@@ -240,18 +247,21 @@ const CourseDetail: React.FC = () => {
                 </button>
                 <button
                   onClick={async () => {
-                    const initialAttendance: Record<string, boolean> = {};
+                    const initialAttendance: Record<string, { estado: 'presente' | 'ausente' | 'ausente_con_aviso'; observacion: string }> = {};
                     students.forEach(s => {
-                      if (s.estudianteId) initialAttendance[s.estudianteId] = false;
+                      if (s.estudianteId) initialAttendance[s.estudianteId] = { estado: 'ausente', observacion: '' };
                     });
-                    
+
                     // Try to load existing attendance for today
                     try {
                       const todayIso = new Date().toISOString().split('T')[0];
                       const existing = await dataService.getAttendance(id!, todayIso);
                       if (existing && existing.asistencias) {
                         existing.asistencias.forEach((a: any) => {
-                          initialAttendance[a.estudianteId] = a.presente;
+                          initialAttendance[a.estudianteId] = {
+                            estado: a.estadoAsistencia || (a.presente ? 'presente' : 'ausente'),
+                            observacion: a.observacion || ''
+                          };
                         });
                       }
                     } catch (e) {
@@ -327,12 +337,7 @@ const CourseDetail: React.FC = () => {
                     const presentCount = session.asistencias.filter((a: any) => a.presente).length;
                     const totalCount = session.asistencias.length;
                     const percentage = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
-                    const absentIds = session.asistencias.filter((a: any) => !a.presente).map((a: any) => a.estudianteId);
-                    const absentNames = absentIds.map((eid: string) => {
-                      const s = students.find(st => st.estudianteId === eid);
-                      return s ? `${s.nombre} ${s.apellido}` : null;
-                    }).filter(Boolean);
-
+                    // Mostrar todos los estudiantes con su estado y observación
                     return (
                       <div key={idx} className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:border-indigo-200 transition-colors">
                         <div className="flex justify-between items-start mb-2">
@@ -347,18 +352,25 @@ const CourseDetail: React.FC = () => {
                           <Users size={14} />
                           <span>{presentCount} presentes de {totalCount}</span>
                         </div>
-                        {absentNames.length > 0 && (
-                          <div className="mt-2 border-t border-slate-100 pt-2">
-                            <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Ausentes</p>
-                            <ul className="space-y-0.5">
-                              {absentNames.map((name, i) => (
-                                <li key={i} className="text-xs text-slate-500 flex items-center gap-1">
-                                  <X size={10} className="text-red-400 shrink-0" /> {name}
+                        <div className="mt-2 border-t border-slate-100 pt-2">
+                          <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Detalle de asistencia</p>
+                          <ul className="space-y-0.5">
+                            {session.asistencias.map((a: any, i: number) => {
+                              const s = students.find(st => st.estudianteId === a.estudianteId);
+                              let estado = a.estadoAsistencia || (a.presente ? 'presente' : 'ausente');
+                              let color = estado === 'presente' ? 'text-green-500' : (estado === 'ausente_con_aviso' ? 'text-yellow-500' : 'text-red-400');
+                              let label = estado === 'presente' ? 'Presente' : (estado === 'ausente_con_aviso' ? 'Ausente con aviso' : 'Ausente');
+                              return (
+                                <li key={i} className={`text-xs flex items-center gap-2 ${color}`}>
+                                  {estado === 'presente' ? <Check size={12} /> : <X size={12} />}
+                                  <span className="text-slate-700 font-bold">{s ? `${s.nombre} ${s.apellido}` : a.estudianteId}</span>
+                                  <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-100 border border-slate-200">{label}</span>
+                                  {a.observacion && <span className="text-slate-500 italic">{a.observacion}</span>}
                                 </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
+                              );
+                            })}
+                          </ul>
+                        </div>
                       </div>
                     );
                   })}
@@ -399,15 +411,42 @@ const CourseDetail: React.FC = () => {
                   >
                     <div className="flex items-center gap-4">
                       {isAttendanceMode ? (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleAttendance(student.estudianteId!);
-                          }}
-                          className={`size-10 rounded-xl flex items-center justify-center transition-all border-2 ${attendance[student.estudianteId!] ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-100' : 'bg-white border-slate-200 text-slate-300 hover:border-slate-300'}`}
-                        >
-                          {attendance[student.estudianteId!] ? <Check size={24} /> : <div className="size-3 rounded-full bg-slate-200" />}
-                        </button>
+                        <div className="flex flex-col gap-2 items-center">
+                          <select
+                            value={attendance[student.estudianteId!]?.estado || 'ausente'}
+                            onChange={e => {
+                              const estado = e.target.value as 'presente' | 'ausente' | 'ausente_con_aviso';
+                              setAttendance(prev => ({
+                                ...prev,
+                                [student.estudianteId!]: {
+                                  ...prev[student.estudianteId!],
+                                  estado
+                                }
+                              }));
+                            }}
+                            className="rounded-lg border border-slate-300 px-2 py-1 text-sm font-bold focus:border-indigo-500 bg-white text-slate-700"
+                          >
+                            <option value="presente">Presente</option>
+                            <option value="ausente">Ausente</option>
+                            <option value="ausente_con_aviso">Ausente con aviso</option>
+                          </select>
+                          <input
+                            type="text"
+                            value={attendance[student.estudianteId!]?.observacion || ''}
+                            onChange={e => {
+                              const observacion = e.target.value;
+                              setAttendance(prev => ({
+                                ...prev,
+                                [student.estudianteId!]: {
+                                  ...prev[student.estudianteId!],
+                                  observacion
+                                }
+                              }));
+                            }}
+                            placeholder="Observación (opcional)"
+                            className="rounded-lg border border-slate-200 px-2 py-1 text-xs w-40 focus:border-indigo-400 bg-white text-slate-700"
+                          />
+                        </div>
                       ) : (
                         <div className="size-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center font-black text-lg group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
                           {student.nombre?.charAt(0) || '?'}
