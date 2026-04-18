@@ -1,7 +1,37 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { dataService } from '../services/api';
-import type { Student } from '../types';
+import { API_DATA_URL } from '../constants';
+
+const CONFIGURED_DATA_BASE = (import.meta as any).env?.VITE_API_DATA_BASE_URL as string | undefined;
+const API_BASE =
+  typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? '/backend'
+    : CONFIGURED_DATA_BASE || API_DATA_URL;
+
+const fetchJson = async (path: string) => {
+  const token = localStorage.getItem('accessToken');
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(`${API_BASE}${path}`, { headers });
+  if (!res.ok) throw new Error(`Error ${res.status}`);
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+};
+
+const putJson = async (path: string, body: unknown) => {
+  const token = localStorage.getItem('accessToken');
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const msg = await res.text().catch(() => '');
+    throw new Error(msg || `Error ${res.status}`);
+  }
+};
 
 const InlineInput: React.FC<{
   value: string;
@@ -23,29 +53,15 @@ const InlineInput: React.FC<{
 const AutoretiroConsent: React.FC = () => {
   const { id } = useParams<{ id: string }>();
 
-  const [student, setStudent] = useState<Student | null>(null);
-  const [loadingStudent, setLoadingStudent] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-
   const [parentNombre, setParentNombre] = useState('');
   const [parentDni, setParentDni] = useState('');
+  const [studentNombre, setStudentNombre] = useState('');
   const [studentDniInput, setStudentDniInput] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!id) return;
-    dataService.request(`/estudiante/${id}`)
-      .then((data: any) => {
-        const s = data?.result ?? data?.Result ?? data;
-        setStudent(s);
-      })
-      .catch(() => setFetchError('No se pudo cargar los datos del estudiante.'))
-      .finally(() => setLoadingStudent(false));
-  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,16 +71,24 @@ const AutoretiroConsent: React.FC = () => {
       setError('Completá tu nombre completo y DNI.');
       return;
     }
-
-    const expectedDni = (student?.documento || student?.dni || '').trim();
-    if (!expectedDni || studentDniInput.trim() !== expectedDni) {
-      setError('El DNI del alumno/a no coincide con el registrado en el sistema. Verificá los datos ingresados.');
+    if (!studentNombre.trim() || !studentDniInput.trim()) {
+      setError('Completá el nombre y DNI del alumno/a.');
       return;
     }
 
     setLoading(true);
     try {
-      await dataService.request(`/estudiante/update/${id}`, 'PUT', { autoretiro: 1 });
+      const data = await fetchJson(`/estudiante/${id}`);
+      const student = data?.result ?? data?.Result ?? data;
+      const expectedDni = (student?.documento || student?.dni || '').trim();
+
+      if (!expectedDni || studentDniInput.trim() !== expectedDni) {
+        setError('El DNI del alumno/a no coincide con el registrado en el sistema. Verificá los datos ingresados.');
+        setLoading(false);
+        return;
+      }
+
+      await putJson(`/estudiante/update/${id}`, { autoretiro: 1 });
       setSuccess(true);
     } catch (err: any) {
       setError(err?.message || 'No se pudo registrar la autorización. Intentá nuevamente.');
@@ -73,32 +97,10 @@ const AutoretiroConsent: React.FC = () => {
     }
   };
 
-  if (loadingStudent) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100">
-        <p className="text-slate-500 text-lg animate-pulse">Cargando datos del alumno/a...</p>
-      </div>
-    );
-  }
-
-  if (fetchError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100">
-        <div className="bg-white rounded-2xl shadow p-8 text-center max-w-sm">
-          <p className="text-red-500 font-semibold">{fetchError}</p>
-          <p className="text-slate-400 text-sm mt-2">Verificá que el enlace sea correcto o contactá a la institución.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const studentFullName = student ? `${student.nombre} ${student.apellido}` : '';
-
   return (
     <div className="min-h-screen bg-slate-100 flex items-start justify-center py-10 px-4">
       <div className="w-full max-w-2xl bg-white shadow-xl rounded-2xl p-10 border border-slate-200">
 
-        {/* Header */}
         <div className="text-center mb-8 border-b border-slate-200 pb-6">
           <p className="text-xs text-slate-400 uppercase tracking-widest mb-2">
             Orquesta Escuela Juvenil de San Telmo
@@ -113,7 +115,7 @@ const AutoretiroConsent: React.FC = () => {
             <div className="text-5xl mb-3">✓</div>
             <p className="font-black text-xl">¡Autorización registrada!</p>
             <p className="mt-2 text-sm text-green-600">
-              El autoretiro de <strong>{studentFullName}</strong> fue habilitado correctamente.
+              El autoretiro de <strong>{studentNombre}</strong> fue habilitado correctamente.
             </p>
           </div>
         ) : (
@@ -135,9 +137,12 @@ const AutoretiroConsent: React.FC = () => {
                   width="w-32"
                 />
                 ,{' '}en carácter de madre/padre/tutor/a de{' '}
-                <span className="inline-block border-b-2 border-slate-400 px-2 min-w-[180px] text-slate-800 font-semibold bg-slate-50 rounded-sm">
-                  {studentFullName}
-                </span>
+                <InlineInput
+                  placeholder="Nombre y Apellido del alumno/a"
+                  value={studentNombre}
+                  onChange={setStudentNombre}
+                  width="w-56"
+                />
                 ,{' '}DNI{' '}
                 <InlineInput
                   placeholder="DNI del alumno/a"
@@ -179,7 +184,7 @@ const AutoretiroConsent: React.FC = () => {
               disabled={loading}
               className="mt-8 w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 active:scale-[0.98] transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {loading ? 'Guardando...' : 'Confirmar Autorización'}
+              {loading ? 'Validando y guardando...' : 'Confirmar Autorización'}
             </button>
           </form>
         )}
