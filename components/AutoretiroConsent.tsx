@@ -1,121 +1,190 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { dataService } from '../services/api';
-import Layout from './Layout';
+import type { Student } from '../types';
+
+const InlineInput: React.FC<{
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  width?: string;
+  type?: string;
+}> = ({ value, onChange, placeholder, width = 'w-40', type = 'text' }) => (
+  <input
+    type={type}
+    value={value}
+    onChange={e => onChange(e.target.value)}
+    placeholder={placeholder}
+    required
+    className={`${width} border-b-2 border-slate-400 focus:border-blue-500 outline-none bg-transparent px-1 text-slate-800 placeholder-slate-300 text-[15px] transition-colors`}
+  />
+);
 
 const AutoretiroConsent: React.FC = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
+
+  const [student, setStudent] = useState<Student | null>(null);
+  const [loadingStudent, setLoadingStudent] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const [parentNombre, setParentNombre] = useState('');
+  const [parentDni, setParentDni] = useState('');
+  const [studentDniInput, setStudentDniInput] = useState('');
+  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [checked, setChecked] = useState(false);
-  const [parentNombre, setParentNombre] = useState('');
-  const [parentApellido, setParentApellido] = useState('');
-  const [parentDni, setParentDni] = useState('');
+
+  useEffect(() => {
+    if (!id) return;
+    dataService.request(`/estudiante/${id}`)
+      .then((data: any) => {
+        const s = data?.result ?? data?.Result ?? data;
+        setStudent(s);
+      })
+      .catch(() => setFetchError('No se pudo cargar los datos del estudiante.'))
+      .finally(() => setLoadingStudent(false));
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
-    if (!parentNombre.trim() || !parentApellido.trim() || !parentDni.trim()) {
-      setError('Debe completar nombre, apellido y DNI del padre/madre/tutor.');
-      setLoading(false);
+
+    if (!parentNombre.trim() || !parentDni.trim()) {
+      setError('Completá tu nombre completo y DNI.');
       return;
     }
+
+    const expectedDni = (student?.documento || student?.dni || '').trim();
+    if (!expectedDni || studentDniInput.trim() !== expectedDni) {
+      setError('El DNI del alumno/a no coincide con el registrado en el sistema. Verificá los datos ingresados.');
+      return;
+    }
+
+    setLoading(true);
     try {
-      await dataService.request(`/estudiante/update/${id}`, 'PUT', {
-        autoretiro: checked,
-        nombreTutor: parentNombre.trim(),
-        apellidoTutor: parentApellido.trim(),
-        documentoTutor: parentDni.trim(),
-      });
+      await dataService.request(`/estudiante/update/${id}`, 'PUT', { autoretiro: 1 });
       setSuccess(true);
     } catch (err: any) {
-      setError(err?.message || 'No se pudo actualizar el estado.');
+      setError(err?.message || 'No se pudo registrar la autorización. Intentá nuevamente.');
     } finally {
       setLoading(false);
     }
   };
 
+  if (loadingStudent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-100">
+        <p className="text-slate-500 text-lg animate-pulse">Cargando datos del alumno/a...</p>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-100">
+        <div className="bg-white rounded-2xl shadow p-8 text-center max-w-sm">
+          <p className="text-red-500 font-semibold">{fetchError}</p>
+          <p className="text-slate-400 text-sm mt-2">Verificá que el enlace sea correcto o contactá a la institución.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const studentFullName = student ? `${student.nombre} ${student.apellido}` : '';
+
   return (
-    <Layout>
-      <div className="max-w-lg mx-auto bg-white rounded-2xl shadow-xl p-8 mt-12 border border-slate-200">
-        <h1 className="text-2xl font-black text-slate-800 mb-4">Autorización de Autoretiro de Alumno/a – Declaración Jurada</h1>
-        <p className="mb-6 text-slate-600 whitespace-pre-line">
-          Por medio de la presente, y en carácter de <b>declaración jurada</b>, autorizo a mi hijo/a a retirarse solo/a del establecimiento educativo al finalizar las actividades escolares y/o extracurriculares.\n\n
-          Declaro que he sido informado/a sobre los riesgos y responsabilidades que implica esta decisión, y asumo la responsabilidad civil y penal que pudiera derivarse de la misma, eximiendo a la institución y a su personal de toda responsabilidad por los hechos que pudieran ocurrir una vez que mi hijo/a se retire del establecimiento por sus propios medios.\n\n
-          Esta autorización se otorga conforme a la normativa vigente en materia de patria potestad y responsabilidad parental (artículos 638 y siguientes del Código Civil y Comercial de la Nación), y podrá ser revocada en cualquier momento por escrito.\n\n
-          Declaro que los datos consignados son verídicos y que esta decisión es tomada de manera voluntaria.
-        </p>
+    <div className="min-h-screen bg-slate-100 flex items-start justify-center py-10 px-4">
+      <div className="w-full max-w-2xl bg-white shadow-xl rounded-2xl p-10 border border-slate-200">
+
+        {/* Header */}
+        <div className="text-center mb-8 border-b border-slate-200 pb-6">
+          <p className="text-xs text-slate-400 uppercase tracking-widest mb-2">
+            Orquesta Escuela Juvenil de San Telmo
+          </p>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight">
+            AUTORIZACIÓN DE RETIRO
+          </h1>
+        </div>
+
         {success ? (
-          <div className="bg-green-100 text-green-700 rounded-lg p-4 text-center font-bold">
-            ¡Estado de autoretiro actualizado correctamente!
+          <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-8 text-center">
+            <div className="text-5xl mb-3">✓</div>
+            <p className="font-black text-xl">¡Autorización registrada!</p>
+            <p className="mt-2 text-sm text-green-600">
+              El autoretiro de <strong>{studentFullName}</strong> fue habilitado correctamente.
+            </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="flex items-center gap-3">
-              <input
-                id="autoretiro-check"
-                type="checkbox"
-                checked={checked}
-                onChange={e => setChecked(e.target.checked)}
-                className="size-5 accent-blue-600"
-                required
-              />
-              <label htmlFor="autoretiro-check" className="text-slate-700 font-medium">
-                Confirmo que autorizo el autoretiro de mi hijo/a y acepto los términos de la declaración jurada.
-              </label>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label htmlFor="parent-nombre" className="block text-xs font-bold text-slate-600 mb-1">Nombre del padre/madre/tutor</label>
-                <input
-                  id="parent-nombre"
-                  type="text"
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2"
+          <form onSubmit={handleSubmit}>
+            <div className="text-slate-700 leading-[2.2] text-[15px] space-y-5">
+              <p>
+                Por medio de la presente, yo,{' '}
+                <InlineInput
+                  placeholder="Nombre y Apellido del padre/madre/tutor"
                   value={parentNombre}
-                  onChange={e => setParentNombre(e.target.value)}
-                  required
-                  autoComplete="off"
+                  onChange={setParentNombre}
+                  width="w-72"
                 />
-              </div>
-              <div>
-                <label htmlFor="parent-apellido" className="block text-xs font-bold text-slate-600 mb-1">Apellido del padre/madre/tutor</label>
-                <input
-                  id="parent-apellido"
-                  type="text"
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2"
-                  value={parentApellido}
-                  onChange={e => setParentApellido(e.target.value)}
-                  required
-                  autoComplete="off"
-                />
-              </div>
-              <div>
-                <label htmlFor="parent-dni" className="block text-xs font-bold text-slate-600 mb-1">DNI del padre/madre/tutor</label>
-                <input
-                  id="parent-dni"
-                  type="text"
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2"
+                ,{' '}DNI{' '}
+                <InlineInput
+                  placeholder="DNI"
                   value={parentDni}
-                  onChange={e => setParentDni(e.target.value)}
-                  required
-                  autoComplete="off"
+                  onChange={setParentDni}
+                  width="w-32"
                 />
-              </div>
+                ,{' '}en carácter de madre/padre/tutor/a de{' '}
+                <span className="inline-block border-b-2 border-slate-400 px-2 min-w-[180px] text-slate-800 font-semibold bg-slate-50 rounded-sm">
+                  {studentFullName}
+                </span>
+                ,{' '}DNI{' '}
+                <InlineInput
+                  placeholder="DNI del alumno/a"
+                  value={studentDniInput}
+                  onChange={setStudentDniInput}
+                  width="w-32"
+                />
+                ,{' '}autorizo a mi hijo/a a retirarse por sus propios medios del establecimiento
+                donde funciona la <strong>Orquesta Escuela Juvenil de San Telmo</strong>, sito en{' '}
+                <strong>Venezuela 340/330, Ciudad Autónoma de Buenos Aires</strong>.
+              </p>
+
+              <p>
+                Declaro asumir plena responsabilidad por el traslado y seguridad de mi hijo/a
+                una vez finalizadas las actividades, desligando a la institución y a su personal
+                de toda responsabilidad a partir de su egreso del establecimiento.
+              </p>
+
+              <p>
+                La presente autorización tiene validez desde el día{' '}
+                <InlineInput
+                  type="date"
+                  value={date}
+                  onChange={setDate}
+                  width="w-44"
+                />
+                .
+              </p>
             </div>
-            {error && <div className="text-red-500 text-sm font-bold">{error}</div>}
+
+            {error && (
+              <div className="mt-6 p-4 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl font-medium">
+                {error}
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={loading || !checked}
-              className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition"
+              disabled={loading}
+              className="mt-8 w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 active:scale-[0.98] transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {loading ? 'Guardando...' : 'Actualizar Autorización'}
+              {loading ? 'Guardando...' : 'Confirmar Autorización'}
             </button>
           </form>
         )}
       </div>
-    </Layout>
+    </div>
   );
 };
 
