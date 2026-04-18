@@ -556,6 +556,9 @@ const EventCalendar: React.FC = () => {
       }
 
       setShowCreateModal(false);
+      dataService.getEventos({ month: monthKey })
+        .then(fresh => { if (Array.isArray(fresh)) setEvents(fresh.map(toViewModel)); })
+        .catch(() => {});
     } catch (error: any) {
       setCreateError(error?.message || `No se pudo ${editingEventId ? 'actualizar' : 'crear'} el evento.`);
     } finally {

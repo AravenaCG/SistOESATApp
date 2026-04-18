@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { X as CloseIcon } from 'lucide-react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { dataService, authService } from '../services/api';
-import { Student, InstrumentLoan } from '../types';
+import { Student } from '../types';
 import { getInstrumentName } from '../constants';
 import Layout from './Layout';
 import { Guitar, ArrowRightLeft, Check, AlertCircle, QrCode, X, Plus, Trash2 } from 'lucide-react';
@@ -57,7 +57,7 @@ const StudentProfile: React.FC = () => {
         const payload: Partial<Student> = {};
         editableFields.forEach(({ key }) => {
           if (editForm[key] !== undefined && editForm[key] !== student[key]) {
-            payload[key] = editForm[key];
+            (payload as any)[key] = editForm[key];
           }
         });
         await dataService.request(`/estudiante/update/${student.estudianteId}`, 'PUT', payload);
@@ -86,7 +86,7 @@ const StudentProfile: React.FC = () => {
   const [processingCourseChange, setProcessingCourseChange] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [scannerMode, setScannerMode] = useState<'lend' | 'return' | null>(null);
-  const [scannerError, setScannerError] = useState<string | null>(null);
+  const [, setScannerError] = useState<string | null>(null);
   const [showDeleteOptions, setShowDeleteOptions] = useState(false);
   const [deleteActionLoading, setDeleteActionLoading] = useState(false);
 
@@ -377,7 +377,7 @@ const StudentProfile: React.FC = () => {
     }
   }
 
-  function onScanFailure(error: any) {
+  function onScanFailure(_error: any) {
     // console.warn(`Code scan error = ${error}`);
   }
 
@@ -543,7 +543,7 @@ const StudentProfile: React.FC = () => {
                                     <input
                                       id={`edit-${key}`}
                                       type={type || 'text'}
-                                      value={editForm[key] ?? ''}
+                                      value={(editForm[key] as string | number | undefined) ?? ''}
                                       onChange={e => handleEditChange(key, e.target.value)}
                                       className="rounded-lg border border-border-dark bg-[#101622] px-4 py-2.5 text-white outline-none focus:ring-1 focus:ring-blue-500 w-full"
                                       required={required}
@@ -603,7 +603,7 @@ const StudentProfile: React.FC = () => {
                      <>
                        <button
                          onClick={() => {
-                           const url = `${window.location.origin}/autoretiro/${student.estudianteId}`;
+                           const url = `${window.location.origin}/#/autoretiro/${student.estudianteId}`;
                            window.open(url, '_blank');
                          }}
                          className="flex-1 md:flex-none h-10 px-5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 text-sm font-semibold rounded-lg transition-colors border border-blue-500/30 flex items-center justify-center gap-2"
