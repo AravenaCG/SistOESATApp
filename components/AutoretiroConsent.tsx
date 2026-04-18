@@ -88,7 +88,7 @@ const AutoretiroConsent: React.FC = () => {
         return;
       }
 
-      await putJson(`/estudiante/update/${id}`, { autoretiro: 1 });
+      await putJson(`/estudiante/update/${id}`, { autoretiro: true });
       setSuccess(true);
     } catch (err: any) {
       setError(err?.message || 'No se pudo registrar la autorización. Intentá nuevamente.');
