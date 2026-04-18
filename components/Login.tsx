@@ -13,6 +13,12 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (email.trim().toLowerCase() === 'registro@oesat.com') {
+      setError('Esta cuenta es exclusiva para el registro de nuevos estudiantes. Por favor, accedé desde la sección de Registro.');
+      return;
+    }
+
     setLoading(true);
 
     try {
