@@ -11,7 +11,8 @@ export const INSTRUMENT_MAP: Record<number, string> = {
   7: "Guitarra",
   8: "Percusión",
   9: "Clarinete",
-  10: "Bandoneón"
+  10: "Bandoneón",
+  11: "Saxófon"
 };
 
 export const getInstrumentName = (id?: number): string => {

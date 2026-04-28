@@ -548,6 +548,7 @@ const RegistrationForm: React.FC = () => {
                 <option value="8">Percusión</option>
                 <option value="9">Clarinete</option>
                 <option value="10">Bandoneón</option>
+                <option value="11">Saxófon</option>
               </select>
 
               <select 
