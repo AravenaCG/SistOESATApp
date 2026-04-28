@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Layout from './Layout';
 import { dataService } from '../services/api';
 import { Course, Student, SaveAttendanceDto } from '../types';
+import { getInstrumentName } from '../constants';
 import * as XLSX from 'xlsx';
 import {
   Users,
@@ -177,6 +178,7 @@ const CourseDetail: React.FC = () => {
       Teléfono: s.telefono || s.celular || '-',
       Dirección: s.direccion || s.domicilio || '-',
       Nacionalidad: s.nacionalidad || '-',
+      Instrumento: getInstrumentName(s.instrumentoId),
       Estado: s.activo === false ? 'Inactivo' : 'Activo',
       'Tutor 1': s.nombreTutor || s.nombreTutor1 || '-',
       'DNI Tutor 1': s.documentoTutor || s.dniTutor1 || '-',
