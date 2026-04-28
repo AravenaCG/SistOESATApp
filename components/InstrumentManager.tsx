@@ -5,7 +5,7 @@ import { INSTRUMENT_MAP } from '../constants';
 import { StockInstrumento, CreateStockDto, UpdateStockDto } from '../types';
 import { dataService } from '../services/api';
 import { QRCodeSVG } from 'qrcode.react';
-import { Printer, Download, Package, Plus, X, Loader2, AlertCircle, Pencil, Trash2 } from 'lucide-react';
+import { Printer, Download, Package, Plus, X, Loader2, AlertCircle, Pencil, Trash2, User } from 'lucide-react';
 
 const InstrumentManager: React.FC = () => {
   
@@ -34,6 +34,9 @@ const InstrumentManager: React.FC = () => {
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
 
+  // Borrower map: stockInstrumentoId -> "Nombre Apellido"
+  const [loansByStock, setLoansByStock] = useState<Record<number, string>>({});
+
   // Fetch Inventory
   const fetchInventory = async () => {
     try {
@@ -48,8 +51,33 @@ const InstrumentManager: React.FC = () => {
     }
   };
 
+  const fetchLoanInfo = async () => {
+    try {
+      const loans = await dataService.getActivePrestamos();
+      if (!Array.isArray(loans) || loans.length === 0) {
+        setLoansByStock({});
+        return;
+      }
+      const map: Record<number, string> = {};
+      await Promise.all(loans.map(async (loan: any) => {
+        try {
+          const student = await dataService.request(`/estudiante/${loan.estudianteId}`);
+          const nombre = student?.nombre || student?.Nombre || '';
+          const apellido = student?.apellido || student?.Apellido || '';
+          map[loan.stockInstrumentoId] = `${nombre} ${apellido}`.trim() || loan.estudianteId;
+        } catch {
+          map[loan.stockInstrumentoId] = loan.estudianteId;
+        }
+      }));
+      setLoansByStock(map);
+    } catch {
+      // Loan info is supplementary — fail silently
+    }
+  };
+
   useEffect(() => {
     fetchInventory();
+    fetchLoanInfo();
   }, []);
 
   // Grouping Logic
@@ -300,6 +328,14 @@ const InstrumentManager: React.FC = () => {
                          <p className={`text-[10px] font-bold mt-1 px-2 ${item.estado === 'Disponible' ? 'text-green-600' : 'text-orange-600'}`}>
                            {item.estado}
                          </p>
+                         {item.estado === 'Prestado' && loansByStock[item.stockInstrumentoId] && (
+                           <div className="mt-1 flex items-center justify-center gap-1 text-[10px] text-blue-600 w-full px-1">
+                             <User size={9} className="flex-shrink-0" />
+                             <span className="truncate" title={loansByStock[item.stockInstrumentoId]}>
+                               {loansByStock[item.stockInstrumentoId]}
+                             </span>
+                           </div>
+                         )}
                        </div>
 
                        {/* Actions Overlay (visible on hover) */}

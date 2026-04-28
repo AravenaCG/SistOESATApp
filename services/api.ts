@@ -181,6 +181,7 @@ export const dataService = {
   // Loan Endpoints
   asignarPrestamo: (dto: any) => dataService.request('/api/prestamos/asignar', 'POST', dto),
   devolverPrestamo: (dto: any) => dataService.request('/api/prestamos/devolver', 'POST', dto),
+  getActivePrestamos: () => dataService.request('/api/prestamos/activos', 'GET'),
   getPrestamosEstudiante: async (estudianteId: string) => {
     try {
       const data = await dataService.request(`/api/prestamos/estudiante/${estudianteId}`, 'GET');

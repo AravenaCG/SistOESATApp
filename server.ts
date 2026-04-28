@@ -217,6 +217,23 @@ async function startServer() {
     res.json(enriched);
   });
 
+  // All currently active loans (no devolucion) enriched with stock info
+  app.get('/api/prestamos/activos', (req, res) => {
+    const activos = prestamos
+      .filter(p => p.fechaDevolucion === null)
+      .map(p => {
+        const s = stock.find(item => item.stockInstrumentoId === p.stockInstrumentoId);
+        return {
+          prestamoInstrumentoId: p.prestamoInstrumentoId,
+          estudianteId: p.estudianteId,
+          stockInstrumentoId: p.stockInstrumentoId,
+          codigoInventario: s?.codigoInventario,
+          fechaPrestamo: p.fechaPrestamo,
+        };
+      });
+    res.json(activos);
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
