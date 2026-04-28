@@ -10,7 +10,8 @@ const API_BASE =
 
 const fetchJson = async (path: string) => {
   const token = localStorage.getItem('accessToken');
-  const headers: Record<string, string> = {};
+  // Content-Type on GET makes the .NET backend serialize as flat camelCase (same as dataService.request)
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
   const res = await fetch(`${API_BASE}${path}`, { headers });
   if (!res.ok) throw new Error(`Error ${res.status}`);
@@ -27,9 +28,28 @@ const putJson = async (path: string, body: unknown) => {
     headers,
     body: JSON.stringify(body),
   });
+  const text = await res.text().catch(() => '');
   if (!res.ok) {
-    const msg = await res.text().catch(() => '');
-    throw new Error(msg || `Error ${res.status}`);
+    throw new Error(text || `Error ${res.status}`);
+  }
+  // Some .NET APIs return HTTP 200 with an error payload ({ messages: [{ status: 'Error' }] })
+  if (text) {
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed?.messages && Array.isArray(parsed.messages)) {
+        const err = parsed.messages.find((m: any) => m.status === 'Error' || m.Status === 'Error');
+        if (err) throw new Error(err.description || err.Description || 'Error al actualizar');
+      }
+      if (parsed?.success === false || parsed?.succes === false) {
+        throw new Error(parsed?.message || parsed?.Message || 'Error al actualizar');
+      }
+    } catch (e) {
+      if (e instanceof SyntaxError) {
+        // plain-text response is fine, ignore
+      } else {
+        throw e;
+      }
+    }
   }
 };
 
@@ -79,8 +99,9 @@ const AutoretiroConsent: React.FC = () => {
     setLoading(true);
     try {
       const data = await fetchJson(`/estudiante/${id}`);
-      const student = data?.result ?? data?.Result ?? data;
-      const expectedDni = (student?.documento || student?.dni || '').trim();
+      // Handle both flat camelCase and wrapped { Estudiante: {...} } PascalCase formats
+      const student = data?.Estudiante ?? data?.estudiante ?? data?.result ?? data?.Result ?? data;
+      const expectedDni = (student?.Documento ?? student?.documento ?? student?.dni ?? '').trim();
 
       if (!expectedDni || studentDniInput.trim() !== expectedDni) {
         setError('El DNI del alumno/a no coincide con el registrado en el sistema. Verificá los datos ingresados.');
@@ -89,6 +110,7 @@ const AutoretiroConsent: React.FC = () => {
       }
 
       await putJson(`/estudiante/update/${id}`, { autoretiro: true });
+
       setSuccess(true);
     } catch (err: any) {
       setError(err?.message || 'No se pudo registrar la autorización. Intentá nuevamente.');

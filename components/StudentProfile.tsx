@@ -38,7 +38,12 @@ const StudentProfile: React.FC = () => {
     // Open edit modal and prefill form
     const openEditModal = () => {
       if (!student) return;
-      setEditForm({ ...student });
+      const formData: Partial<Student> = { ...student };
+      // input[type=date] requires YYYY-MM-DD; the API may return a full ISO string
+      if (formData.fechaNacimiento) {
+        formData.fechaNacimiento = (formData.fechaNacimiento as string).split('T')[0];
+      }
+      setEditForm(formData);
       setShowEditModal(true);
     };
 
@@ -53,11 +58,11 @@ const StudentProfile: React.FC = () => {
       if (!student) return;
       setEditLoading(true);
       try {
-        // Only send changed fields (not all fields)
-        const payload: Partial<Student> = {};
+        // Send only the fields that changed — backend now supports partial updates.
+        const payload: Record<string, any> = {};
         editableFields.forEach(({ key }) => {
           if (editForm[key] !== undefined && editForm[key] !== student[key]) {
-            (payload as any)[key] = editForm[key];
+            payload[key as string] = editForm[key];
           }
         });
         await dataService.request(`/estudiante/update/${student.estudianteId}`, 'PUT', payload);
@@ -105,15 +110,20 @@ const StudentProfile: React.FC = () => {
           dataService.request('/cursos').catch(() => [])
         ]);
         
-        const courses = Array.isArray(coursesData) ? coursesData : (studentData.cursos || studentData.Cursos || []);
-        
+        // Unwrap { Estudiante: {...}, messages: [...] } if the API returns that shape
+        const raw: any = studentData?.Estudiante ?? studentData?.estudiante ?? studentData;
+        const courses = Array.isArray(coursesData) ? coursesData : (raw.cursos || raw.Cursos || []);
+
         setStudent({
-            ...studentData,
-            cursos: courses
+            ...raw,
+            cursos: courses,
+            // Accept both camelCase and PascalCase for boolean fields
+            autoretiro: raw.autoretiro ?? raw.Autoretiro ?? false,
+            activo: raw.activo ?? raw.Activo ?? true,
         });
         const rawLoans = Array.isArray(loansData)
           ? loansData
-          : (Array.isArray((studentData as any).prestamosInstrumentos) ? (studentData as any).prestamosInstrumentos : []);
+          : (Array.isArray(raw.prestamosInstrumentos) ? raw.prestamosInstrumentos : (Array.isArray(raw.PrestamosInstrumentos) ? raw.PrestamosInstrumentos : []));
 
         const normalizedLoans = rawLoans.map((loan: any) => ({
           prestamoInstrumentoId: loan.prestamoInstrumentoId ?? loan.PrestamoInstrumentoId,
@@ -131,8 +141,8 @@ const StudentProfile: React.FC = () => {
         setAllCourses(Array.isArray(allCoursesData) ? allCoursesData : []);
 
         // Fetch available instruments for this student's instrument type
-        if (studentData.instrumentoId) {
-          const stock = await dataService.getDisponibles(studentData.instrumentoId).catch(() => []);
+        if (raw.instrumentoId ?? raw.InstrumentoId) {
+          const stock = await dataService.getDisponibles(raw.instrumentoId ?? raw.InstrumentoId).catch(() => []);
           setAvailableStock(Array.isArray(stock) ? stock : []);
         } else {
           setAvailableStock([]);
@@ -394,6 +404,25 @@ const StudentProfile: React.FC = () => {
   if (!student) return <Layout><div className="p-8">Estudiante no encontrado</div></Layout>;
 
   // Data Normalization Logic
+  const getBirthdayInfo = () => {
+    if (!student.fechaNacimiento) return null;
+    const raw = (student.fechaNacimiento as string).split('T')[0];
+    const dob = new Date(raw + 'T00:00:00');
+    if (isNaN(dob.getTime())) return null;
+
+    const today = new Date();
+    const thisYear = today.getFullYear();
+    const isToday = today.getMonth() === dob.getMonth() && today.getDate() === dob.getDate();
+    const age = thisYear - dob.getFullYear() - (today < new Date(thisYear, dob.getMonth(), dob.getDate()) ? 1 : 0);
+    const nextBirthday = new Date(thisYear, dob.getMonth(), dob.getDate());
+    if (!isToday && nextBirthday < today) nextBirthday.setFullYear(thisYear + 1);
+    const todayNorm = new Date(thisYear, today.getMonth(), today.getDate());
+    const daysUntil = isToday ? 0 : Math.round((nextBirthday.getTime() - todayNorm.getTime()) / 86400000);
+    const formatted = dob.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    return { age, daysUntil, formatted, isToday };
+  };
+
   const getPhoneNumber = () => {
     if (student.telefono && student.telefono.length > 4) return student.telefono;
     if (student.telefonoTutor && student.telefonoTutor.length > 4) return `${student.telefonoTutor} (Tutor 1)`;
@@ -623,7 +652,7 @@ const StudentProfile: React.FC = () => {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <div className="glass-panel p-4 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-[#232f48] transition-colors cursor-pointer group">
                  <span className="text-[#92a4c9] text-sm font-medium">Asistencia</span>
                  <div className="flex items-baseline gap-1">
@@ -644,10 +673,20 @@ const StudentProfile: React.FC = () => {
               <div className="glass-panel p-4 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-[#232f48] transition-colors cursor-pointer group">
                  <span className="text-[#92a4c9] text-sm font-medium">Estado</span>
                  <div className="flex items-baseline gap-1">
-                    <span 
+                    <span
                       className={`text-lg font-bold group-hover:opacity-80 transition-colors ${student.activo ? 'text-green-400' : 'text-red-400'}`}
                     >
                       {student.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                 </div>
+              </div>
+              <div className="glass-panel p-4 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-[#232f48] transition-colors cursor-pointer group">
+                 <span className="text-[#92a4c9] text-sm font-medium">Autoretiro</span>
+                 <div className="flex items-baseline gap-1">
+                    <span
+                      className={`text-lg font-bold group-hover:opacity-80 transition-colors ${student.autoretiro ? 'text-green-400' : 'text-yellow-400'}`}
+                    >
+                      {student.autoretiro ? 'Autorizado' : 'No autorizado'}
                     </span>
                  </div>
               </div>
@@ -689,6 +728,34 @@ const StudentProfile: React.FC = () => {
                              <span className="text-white text-sm">{getPhoneNumber()}</span>
                           </div>
                        </div>
+                       {(() => {
+                         const bday = getBirthdayInfo();
+                         if (!bday) return null;
+                         return (
+                           <div className="flex items-center gap-3">
+                             <div className={`size-8 rounded-lg flex items-center justify-center ${bday.isToday ? 'bg-yellow-500/20 text-yellow-400' : bday.daysUntil <= 7 ? 'bg-blue-500/20 text-blue-400' : 'bg-[#232f48] text-[#92a4c9]'}`}>
+                               <span className="material-symbols-outlined text-sm">cake</span>
+                             </div>
+                             <div className="flex flex-col gap-0.5">
+                               <span className="text-[10px] text-[#92a4c9] uppercase font-bold tracking-wider">Cumpleaños</span>
+                               <span className="text-white text-sm capitalize">{bday.formatted}</span>
+                               <div className="flex items-center gap-2 flex-wrap">
+                                 <span className="text-[#92a4c9] text-xs">{bday.age} años</span>
+                                 {bday.isToday && (
+                                   <span className="text-[10px] font-bold bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full border border-yellow-500/30 animate-pulse">
+                                     ¡Hoy es su cumple!
+                                   </span>
+                                 )}
+                                 {!bday.isToday && bday.daysUntil <= 7 && (
+                                   <span className="text-[10px] font-bold bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded-full border border-blue-500/30">
+                                     En {bday.daysUntil} día{bday.daysUntil !== 1 ? 's' : ''}
+                                   </span>
+                                 )}
+                               </div>
+                             </div>
+                           </div>
+                         );
+                       })()}
                     </div>
                  </div>
               </div>

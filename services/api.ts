@@ -175,6 +175,8 @@ export const dataService = {
   createStock: (dto: any) => dataService.request('/api/stock', 'POST', dto),
   getStock: () => dataService.request('/api/stock', 'GET'),
   getDisponibles: (instrumentoId: number) => dataService.request(`/api/stock/disponibles/${instrumentoId}`, 'GET'),
+  updateStock: (id: number, dto: any) => dataService.request(`/api/stock/${id}`, 'PUT', dto),
+  deleteStock: (id: number) => dataService.request(`/api/stock/${id}`, 'DELETE'),
   
   // Loan Endpoints
   asignarPrestamo: (dto: any) => dataService.request('/api/prestamos/asignar', 'POST', dto),

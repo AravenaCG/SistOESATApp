@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = 4000;
 
   app.use(cors());
   app.use(express.json());
@@ -171,6 +171,38 @@ async function startServer() {
   // Helper to get all stock (for the manager)
   app.get('/api/stock', (req, res) => {
     res.json(stock);
+  });
+
+  // 5) PUT /api/stock/:id
+  app.put('/api/stock/:id', (req, res) => {
+    const id = parseInt(req.params.id);
+    const item = stock.find(s => s.stockInstrumentoId === id);
+    if (!item) return res.status(404).send(`StockInstrumento ${id} no existe.`);
+
+    const { codigoInventario, numeroSerie, estado } = req.body;
+    if (codigoInventario !== undefined) {
+      if (stock.some(s => s.codigoInventario === codigoInventario && s.stockInstrumentoId !== id)) {
+        return res.status(409).send(`CodigoInventario '${codigoInventario}' ya existe.`);
+      }
+      item.codigoInventario = codigoInventario;
+    }
+    if (numeroSerie !== undefined) item.numeroSerie = numeroSerie || null;
+    if (estado !== undefined) item.estado = estado;
+
+    res.json(item);
+  });
+
+  // 6) DELETE /api/stock/:id
+  app.delete('/api/stock/:id', (req, res) => {
+    const id = parseInt(req.params.id);
+    const index = stock.findIndex(s => s.stockInstrumentoId === id);
+    if (index === -1) return res.status(404).send(`StockInstrumento ${id} no existe.`);
+
+    const openLoan = prestamos.find(p => p.stockInstrumentoId === id && p.fechaDevolucion === null);
+    if (openLoan) return res.status(409).send('No se puede eliminar: el instrumento tiene un préstamo activo.');
+
+    stock.splice(index, 1);
+    res.status(204).send();
   });
 
   // Helper to get loans for a student

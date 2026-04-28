@@ -28,6 +28,12 @@ export interface CreateStockDto {
   numeroSerie?: string;
 }
 
+export interface UpdateStockDto {
+  codigoInventario?: string;
+  numeroSerie?: string;
+  estado?: string;
+}
+
 export interface AsignarPrestamoDto {
   estudianteId: string;
   stockInstrumentoId: number;

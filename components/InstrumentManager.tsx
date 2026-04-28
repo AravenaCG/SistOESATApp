@@ -2,10 +2,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import Layout from './Layout';
 import { INSTRUMENT_MAP } from '../constants';
-import { StockInstrumento, CreateStockDto } from '../types';
+import { StockInstrumento, CreateStockDto, UpdateStockDto } from '../types';
 import { dataService } from '../services/api';
 import { QRCodeSVG } from 'qrcode.react';
-import { Printer, Download, Package, Plus, X, Loader2, AlertCircle } from 'lucide-react';
+import { Printer, Download, Package, Plus, X, Loader2, AlertCircle, Pencil, Trash2 } from 'lucide-react';
 
 const InstrumentManager: React.FC = () => {
   
@@ -14,7 +14,7 @@ const InstrumentManager: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Modal State
+  // Create Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newInstrument, setNewInstrument] = useState<CreateStockDto>({
     instrumentoId: 1,
@@ -22,6 +22,17 @@ const InstrumentManager: React.FC = () => {
     numeroSerie: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<StockInstrumento | null>(null);
+  const [editForm, setEditForm] = useState<UpdateStockDto>({
+    codigoInventario: '',
+    numeroSerie: '',
+    estado: 'Disponible',
+  });
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<number | null>(null);
 
   // Fetch Inventory
   const fetchInventory = async () => {
@@ -66,6 +77,48 @@ const InstrumentManager: React.FC = () => {
       alert(err.message || 'Error al crear el ejemplar');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Handle Edit Instrument
+  const handleOpenEdit = (item: StockInstrumento) => {
+    setEditingItem(item);
+    setEditForm({
+      codigoInventario: item.codigoInventario,
+      numeroSerie: item.numeroSerie || '',
+      estado: item.estado,
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+    try {
+      setIsEditSubmitting(true);
+      await dataService.updateStock(editingItem.stockInstrumentoId, editForm);
+      await fetchInventory();
+      setIsEditModalOpen(false);
+      setEditingItem(null);
+    } catch (err: any) {
+      alert(err.message || 'Error al actualizar el instrumento');
+    } finally {
+      setIsEditSubmitting(false);
+    }
+  };
+
+  // Handle Delete Instrument
+  const handleDelete = async (item: StockInstrumento) => {
+    const name = INSTRUMENT_MAP[item.instrumentoId] || 'Instrumento';
+    if (!window.confirm(`¿Eliminar ${name} (${item.codigoInventario}) del inventario? Esta acción no se puede deshacer.`)) return;
+    try {
+      setIsDeleting(item.stockInstrumentoId);
+      await dataService.deleteStock(item.stockInstrumentoId);
+      await fetchInventory();
+    } catch (err: any) {
+      alert(err.message || 'Error al eliminar el instrumento');
+    } finally {
+      setIsDeleting(null);
     }
   };
 
@@ -250,13 +303,28 @@ const InstrumentManager: React.FC = () => {
                        </div>
 
                        {/* Actions Overlay (visible on hover) */}
-                       <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
-                          <button 
+                       <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 rounded-xl">
+                          <button
                             onClick={() => handlePrint(groupName, [item])}
-                            className="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-blue-50 transform hover:scale-105 transition-all shadow-xl"
+                            className="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-blue-50 transform hover:scale-105 transition-all shadow-xl w-32 justify-center"
                           >
                             <Download size={16} />
                             Imprimir
+                          </button>
+                          <button
+                            onClick={() => handleOpenEdit(item)}
+                            className="bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-blue-600 transform hover:scale-105 transition-all shadow-xl w-32 justify-center"
+                          >
+                            <Pencil size={16} />
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item)}
+                            disabled={isDeleting === item.stockInstrumentoId}
+                            className="bg-red-500 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-red-600 transform hover:scale-105 transition-all shadow-xl w-32 justify-center disabled:opacity-60"
+                          >
+                            {isDeleting === item.stockInstrumentoId ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                            Eliminar
                           </button>
                        </div>
                        
@@ -282,6 +350,81 @@ const InstrumentManager: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Edit Modal */}
+        {isEditModalOpen && editingItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="bg-slate-900 p-4 flex justify-between items-center">
+                <h3 className="text-white font-bold text-lg">Editar Instrumento</h3>
+                <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-white">
+                  <X size={20} />
+                </button>
+              </div>
+              <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Instrumento</label>
+                  <p className="px-3 py-2 bg-slate-100 rounded-lg text-slate-700 font-medium">
+                    {INSTRUMENT_MAP[editingItem.instrumentoId] || 'Desconocido'}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Código de Inventario</label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={editForm.codigoInventario}
+                    onChange={e => setEditForm({ ...editForm, codigoInventario: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Número de Serie (Opcional)</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={editForm.numeroSerie}
+                    onChange={e => setEditForm({ ...editForm, numeroSerie: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={editForm.estado}
+                    onChange={e => setEditForm({ ...editForm, estado: e.target.value })}
+                  >
+                    <option value="Disponible">Disponible</option>
+                    <option value="Prestado">Prestado</option>
+                    <option value="Mantenimiento">Mantenimiento</option>
+                  </select>
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                  <button
+                    type="button"
+                    disabled={isEditSubmitting}
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isEditSubmitting}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-lg shadow-blue-500/30 disabled:opacity-50 flex justify-center items-center gap-2"
+                  >
+                    {isEditSubmitting && <Loader2 size={16} className="animate-spin" />}
+                    Guardar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Create Modal */}
         {isModalOpen && (
