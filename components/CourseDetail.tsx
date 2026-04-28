@@ -3,18 +3,20 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Layout from './Layout';
 import { dataService } from '../services/api';
 import { Course, Student, SaveAttendanceDto } from '../types';
-import { 
-  Users, 
-  ArrowLeft, 
-  CheckCircle2, 
-  X, 
-  Save, 
-  Check, 
-  Calendar, 
-  Mail, 
-  Phone, 
+import * as XLSX from 'xlsx';
+import {
+  Users,
+  ArrowLeft,
+  CheckCircle2,
+  X,
+  Save,
+  Check,
+  Calendar,
+  Mail,
+  Phone,
   ChevronRight,
-  Hash
+  Hash,
+  Download
 } from 'lucide-react';
 
 const CourseDetail: React.FC = () => {
@@ -163,6 +165,21 @@ const CourseDetail: React.FC = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleExportStudents = () => {
+    const dataToExport = students.map(s => ({
+      Nombre: s.nombre,
+      Apellido: s.apellido,
+      DNI: s.documento || s.dni || '-',
+      Email: s.email || '-',
+      Teléfono: s.telefono || s.celular || '-',
+      Dirección: s.direccion || s.domicilio || '-',
+    }));
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Alumnos');
+    XLSX.writeFile(wb, `Alumnos_${course?.nombre || 'Curso'}.xlsx`);
   };
 
   if (loading) {
@@ -387,6 +404,14 @@ const CourseDetail: React.FC = () => {
               <h3 className="font-bold text-slate-700 flex items-center gap-2">
                 <Users size={18} /> {isAttendanceMode ? 'Marcar Presentes' : 'Alumnos del Curso'}
               </h3>
+              {!isAttendanceMode && students.length > 0 && (
+                <button
+                  onClick={handleExportStudents}
+                  className="flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-indigo-600 border border-slate-200 hover:border-indigo-300 bg-white hover:bg-indigo-50 px-4 py-2 rounded-xl transition-all"
+                >
+                  <Download size={16} /> Exportar Excel
+                </button>
+              )}
             </div>
             <div className="divide-y divide-slate-100">
               {students.length === 0 ? (
