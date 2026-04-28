@@ -172,9 +172,22 @@ const CourseDetail: React.FC = () => {
       Nombre: s.nombre,
       Apellido: s.apellido,
       DNI: s.documento || s.dni || '-',
+      'Fecha Nacimiento': s.fechaNacimiento || '-',
       Email: s.email || '-',
       Teléfono: s.telefono || s.celular || '-',
       Dirección: s.direccion || s.domicilio || '-',
+      Nacionalidad: s.nacionalidad || '-',
+      Estado: s.activo === false ? 'Inactivo' : 'Activo',
+      'Tutor 1': s.nombreTutor || s.nombreTutor1 || '-',
+      'DNI Tutor 1': s.documentoTutor || s.dniTutor1 || '-',
+      'Teléfono Tutor 1': s.telefonoTutor || s.celularTutor1 || '-',
+      'Tutor 2': s.nombreTutor2 || '-',
+      'DNI Tutor 2': s.documentoTutor2 || '-',
+      'Teléfono Tutor 2': s.telefonoTutor2 || '-',
+      'Trat. Médico': s['tmtMédico'] || '-',
+      'Ep. Psicomotriz': s.epPsicoMotriz || '-',
+      Particularidad: s.particularidad || '-',
+      Autoretiro: s.autoretiro ? 'Sí' : 'No',
     }));
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
