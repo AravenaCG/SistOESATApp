@@ -203,9 +203,9 @@ const StudentProfile: React.FC = () => {
     try {
       setDeleteActionLoading(true);
       await dataService.bajaLogicaEstudiante(id);
-      setStudent(prev => (prev ? { ...prev, activo: false } : prev));
       setShowDeleteOptions(false);
       alert('Baja lógica aplicada correctamente. El estudiante quedó inactivo.');
+      navigate('/dashboard');
     } catch (error: any) {
       alert(error?.message || 'Error al aplicar la baja lógica del estudiante.');
     } finally {
