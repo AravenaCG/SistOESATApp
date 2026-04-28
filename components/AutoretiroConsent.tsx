@@ -10,7 +10,6 @@ const API_BASE =
 
 const fetchJson = async (path: string) => {
   const token = localStorage.getItem('accessToken');
-  // Content-Type on GET makes the .NET backend serialize as flat camelCase (same as dataService.request)
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
   const res = await fetch(`${API_BASE}${path}`, { headers });
@@ -32,7 +31,6 @@ const putJson = async (path: string, body: unknown) => {
   if (!res.ok) {
     throw new Error(text || `Error ${res.status}`);
   }
-  // Some .NET APIs return HTTP 200 with an error payload ({ messages: [{ status: 'Error' }] })
   if (text) {
     try {
       const parsed = JSON.parse(text);
@@ -45,7 +43,7 @@ const putJson = async (path: string, body: unknown) => {
       }
     } catch (e) {
       if (e instanceof SyntaxError) {
-        // plain-text response is fine, ignore
+        // plain-text response is fine
       } else {
         throw e;
       }
@@ -70,9 +68,48 @@ const InlineInput: React.FC<{
   />
 );
 
+const normalizeStudents = (data: any): any[] => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  const d = data as any;
+  if (Array.isArray(d.result)) return d.result;
+  if (Array.isArray(d.Result)) return d.Result;
+  if (Array.isArray(d.data)) return d.data;
+  if (Array.isArray(d.Data)) return d.Data;
+  // Single student object
+  if (d.estudianteId !== undefined || d.EstudianteId !== undefined || d.id !== undefined || d.Id !== undefined) {
+    return [d];
+  }
+  return [];
+};
+
+const PageShell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="min-h-screen bg-slate-100 flex items-start justify-center py-10 px-4">
+    <div className="w-full max-w-2xl bg-white shadow-xl rounded-2xl p-10 border border-slate-200">
+      <div className="text-center mb-8 border-b border-slate-200 pb-6">
+        <p className="text-xs text-slate-400 uppercase tracking-widest mb-2">
+          Orquesta Escuela Juvenil de San Telmo
+        </p>
+        <h1 className="text-2xl font-black text-slate-800 tracking-tight">
+          AUTORIZACIÓN DE RETIRO
+        </h1>
+      </div>
+      {children}
+    </div>
+  </div>
+);
+
 const AutoretiroConsent: React.FC = () => {
   const { id } = useParams<{ id: string }>();
 
+  // Search phase
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [resolvedId, setResolvedId] = useState<string | undefined>(id);
+
+  // Form state
   const [parentNombre, setParentNombre] = useState('');
   const [parentDni, setParentDni] = useState('');
   const [studentNombre, setStudentNombre] = useState('');
@@ -82,6 +119,56 @@ const AutoretiroConsent: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchResults([]);
+
+    const isNumeric = /^\d+$/.test(q);
+
+    try {
+      let data: any;
+      if (isNumeric) {
+        // Search by DNI: pass space as nombre placeholder
+        data = await fetchJson(
+          `/estudianteNombreYDni/${encodeURIComponent(' ')}/${encodeURIComponent(q)}`
+        );
+      } else {
+        // Search by name: pass space as documento placeholder
+        data = await fetchJson(
+          `/estudianteNombreYDni/${encodeURIComponent(q)}/${encodeURIComponent(' ')}`
+        );
+      }
+
+      const results = normalizeStudents(data);
+
+      if (results.length === 0) {
+        setSearchError('No se encontró ningún alumno/a con esos datos. Verificá el DNI o nombre ingresado.');
+      } else if (results.length === 1) {
+        selectStudent(results[0]);
+      } else {
+        setSearchResults(results);
+      }
+    } catch (err: any) {
+      setSearchError(err?.message || 'No se pudo realizar la búsqueda. Intentá nuevamente.');
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const selectStudent = (s: any) => {
+    const sid = String(s.estudianteId ?? s.EstudianteId ?? s.id ?? s.Id ?? '');
+    const nombre = s.nombre ?? s.Nombre ?? '';
+    const apellido = s.apellido ?? s.Apellido ?? '';
+    setResolvedId(sid);
+    setStudentNombre(`${nombre} ${apellido}`.trim());
+    setSearchResults([]);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,8 +185,7 @@ const AutoretiroConsent: React.FC = () => {
 
     setLoading(true);
     try {
-      const data = await fetchJson(`/estudiante/${id}`);
-      // Handle both flat camelCase and wrapped { Estudiante: {...} } PascalCase formats
+      const data = await fetchJson(`/estudiante/${resolvedId}`);
       const student = data?.Estudiante ?? data?.estudiante ?? data?.result ?? data?.Result ?? data;
       const expectedDni = (student?.Documento ?? student?.documento ?? student?.dni ?? '').trim();
 
@@ -109,7 +195,7 @@ const AutoretiroConsent: React.FC = () => {
         return;
       }
 
-      await putJson(`/estudiante/update/${id}`, { autoretiro: true });
+      await putJson(`/estudiante/update/${resolvedId}`, { autoretiro: true });
 
       setSuccess(true);
     } catch (err: any) {
@@ -119,99 +205,157 @@ const AutoretiroConsent: React.FC = () => {
     }
   };
 
+  // Search phase: shown when no student is resolved yet
+  if (!resolvedId) {
+    return (
+      <PageShell>
+        <p className="text-slate-600 text-sm mb-6 text-center">
+          Buscá al alumno/a por su <strong>DNI</strong> o <strong>nombre</strong> para continuar con la autorización.
+        </p>
+
+        <form onSubmit={handleSearch} className="flex gap-3">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="DNI o nombre del alumno/a"
+            className="flex-1 border border-slate-300 rounded-xl px-4 py-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+          />
+          <button
+            type="submit"
+            disabled={searchLoading || !searchQuery.trim()}
+            className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-xl hover:bg-blue-700 active:scale-[0.98] transition disabled:opacity-60 disabled:cursor-not-allowed text-sm whitespace-nowrap"
+          >
+            {searchLoading ? 'Buscando...' : 'Buscar'}
+          </button>
+        </form>
+
+        {searchError && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl font-medium">
+            {searchError}
+          </div>
+        )}
+
+        {searchResults.length > 1 && (
+          <div className="mt-6 space-y-2">
+            <p className="text-sm text-slate-500 font-medium mb-3">Se encontraron varios resultados. Seleccioná al alumno/a:</p>
+            {searchResults.map((s, i) => {
+              const nombre = s.nombre ?? s.Nombre ?? '';
+              const apellido = s.apellido ?? s.Apellido ?? '';
+              const doc = s.documento ?? s.Documento ?? s.dni ?? s.DNI ?? '';
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => selectStudent(s)}
+                  className="w-full text-left px-4 py-3 border border-slate-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition text-sm"
+                >
+                  <span className="font-semibold text-slate-800">{`${nombre} ${apellido}`.trim()}</span>
+                  {doc && <span className="text-slate-400 ml-3 text-xs">DNI {doc}</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </PageShell>
+    );
+  }
+
+  // Consent form
   return (
-    <div className="min-h-screen bg-slate-100 flex items-start justify-center py-10 px-4">
-      <div className="w-full max-w-2xl bg-white shadow-xl rounded-2xl p-10 border border-slate-200">
+    <PageShell>
+      {!id && (
+        <button
+          type="button"
+          onClick={() => { setResolvedId(undefined); setStudentNombre(''); setStudentDniInput(''); setError(null); }}
+          className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition mb-6"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Volver a la búsqueda
+        </button>
+      )}
 
-        <div className="text-center mb-8 border-b border-slate-200 pb-6">
-          <p className="text-xs text-slate-400 uppercase tracking-widest mb-2">
-            Orquesta Escuela Juvenil de San Telmo
+      {success ? (
+        <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-8 text-center">
+          <div className="text-5xl mb-3">✓</div>
+          <p className="font-black text-xl">¡Autorización registrada!</p>
+          <p className="mt-2 text-sm text-green-600">
+            El autoretiro de <strong>{studentNombre}</strong> fue habilitado correctamente.
           </p>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight">
-            AUTORIZACIÓN DE RETIRO
-          </h1>
         </div>
+      ) : (
+        <form onSubmit={handleSubmit}>
+          <div className="text-slate-700 leading-[2.2] text-[15px] space-y-5">
+            <p>
+              Por medio de la presente, yo,{' '}
+              <InlineInput
+                placeholder="Nombre y Apellido del padre/madre/tutor"
+                value={parentNombre}
+                onChange={setParentNombre}
+                width="w-72"
+              />
+              ,{' '}DNI{' '}
+              <InlineInput
+                placeholder="DNI"
+                value={parentDni}
+                onChange={setParentDni}
+                width="w-32"
+              />
+              ,{' '}en carácter de madre/padre/tutor/a de{' '}
+              <InlineInput
+                placeholder="Nombre y Apellido del alumno/a"
+                value={studentNombre}
+                onChange={setStudentNombre}
+                width="w-56"
+              />
+              ,{' '}DNI{' '}
+              <InlineInput
+                placeholder="DNI del alumno/a"
+                value={studentDniInput}
+                onChange={setStudentDniInput}
+                width="w-32"
+              />
+              ,{' '}autorizo a mi hijo/a a retirarse por sus propios medios del establecimiento
+              donde funciona la <strong>Orquesta Escuela Juvenil de San Telmo</strong>, sito en{' '}
+              <strong>Venezuela 340/330, Ciudad Autónoma de Buenos Aires</strong>.
+            </p>
 
-        {success ? (
-          <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-8 text-center">
-            <div className="text-5xl mb-3">✓</div>
-            <p className="font-black text-xl">¡Autorización registrada!</p>
-            <p className="mt-2 text-sm text-green-600">
-              El autoretiro de <strong>{studentNombre}</strong> fue habilitado correctamente.
+            <p>
+              Declaro asumir plena responsabilidad por el traslado y seguridad de mi hijo/a
+              una vez finalizadas las actividades, desligando a la institución y a su personal
+              de toda responsabilidad a partir de su egreso del establecimiento.
+            </p>
+
+            <p>
+              La presente autorización tiene validez desde el día{' '}
+              <InlineInput
+                type="date"
+                value={date}
+                onChange={setDate}
+                width="w-44"
+              />
+              .
             </p>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <div className="text-slate-700 leading-[2.2] text-[15px] space-y-5">
-              <p>
-                Por medio de la presente, yo,{' '}
-                <InlineInput
-                  placeholder="Nombre y Apellido del padre/madre/tutor"
-                  value={parentNombre}
-                  onChange={setParentNombre}
-                  width="w-72"
-                />
-                ,{' '}DNI{' '}
-                <InlineInput
-                  placeholder="DNI"
-                  value={parentDni}
-                  onChange={setParentDni}
-                  width="w-32"
-                />
-                ,{' '}en carácter de madre/padre/tutor/a de{' '}
-                <InlineInput
-                  placeholder="Nombre y Apellido del alumno/a"
-                  value={studentNombre}
-                  onChange={setStudentNombre}
-                  width="w-56"
-                />
-                ,{' '}DNI{' '}
-                <InlineInput
-                  placeholder="DNI del alumno/a"
-                  value={studentDniInput}
-                  onChange={setStudentDniInput}
-                  width="w-32"
-                />
-                ,{' '}autorizo a mi hijo/a a retirarse por sus propios medios del establecimiento
-                donde funciona la <strong>Orquesta Escuela Juvenil de San Telmo</strong>, sito en{' '}
-                <strong>Venezuela 340/330, Ciudad Autónoma de Buenos Aires</strong>.
-              </p>
 
-              <p>
-                Declaro asumir plena responsabilidad por el traslado y seguridad de mi hijo/a
-                una vez finalizadas las actividades, desligando a la institución y a su personal
-                de toda responsabilidad a partir de su egreso del establecimiento.
-              </p>
-
-              <p>
-                La presente autorización tiene validez desde el día{' '}
-                <InlineInput
-                  type="date"
-                  value={date}
-                  onChange={setDate}
-                  width="w-44"
-                />
-                .
-              </p>
+          {error && (
+            <div className="mt-6 p-4 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl font-medium">
+              {error}
             </div>
+          )}
 
-            {error && (
-              <div className="mt-6 p-4 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl font-medium">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-8 w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 active:scale-[0.98] transition disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Validando y guardando...' : 'Confirmar Autorización'}
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-8 w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 active:scale-[0.98] transition disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Validando y guardando...' : 'Confirmar Autorización'}
+          </button>
+        </form>
+      )}
+    </PageShell>
   );
 };
 

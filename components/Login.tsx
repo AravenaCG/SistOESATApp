@@ -187,6 +187,7 @@ const Login: React.FC = () => {
         <footer className="flex gap-6 text-sm font-medium text-text-secondary">
           <a className="hover:text-white transition-colors" href="#">Ayuda</a>
           <a className="hover:text-white transition-colors" href="#">Privacidad</a>
+          <Link to="/autoretiro" className="text-xs opacity-60 hover:opacity-100 hover:text-white transition-all">Autoretiro</Link>
           <span className="ml-auto text-xs opacity-50">v2.0.4</span>
         </footer>
       </div>

@@ -16,7 +16,8 @@ const App: React.FC = () => {
   return (
     <HashRouter>
       <Routes>
-        {/* Public route for autoretiro consent */}
+        {/* Public routes for autoretiro consent (with or without student id) */}
+        <Route path="/autoretiro" element={<AutoretiroConsent />} />
         <Route path="/autoretiro/:id" element={<AutoretiroConsent />} />
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
