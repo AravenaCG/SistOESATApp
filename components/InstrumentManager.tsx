@@ -186,7 +186,7 @@ const InstrumentManager: React.FC = () => {
             .qr-code { width: 120px; height: 120px; margin-bottom: 10px; }
             .item-name { font-weight: bold; font-size: 16px; margin: 5px 0; }
             .item-code { font-family: monospace; font-size: 14px; color: #000; background: #eee; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
-            .item-detail { font-size: 10px; color: #666; margin-top: 5px; max-width: 150px; }
+            .item-serie { font-size: 11px; color: #555; margin-top: 5px; }
             
             @media print {
               body { padding: 0; }
@@ -211,7 +211,7 @@ const InstrumentManager: React.FC = () => {
                   <img src="${qrUrl}" class="qr-code" alt="QR" />
                   <div class="item-name">${name}</div>
                   <div class="item-code">${item.codigoInventario}</div>
-                  <div class="item-detail">${item.estado}</div>
+                  ${item.numeroSerie ? `<div class="item-serie">N/S: ${item.numeroSerie}</div>` : ''}
                 </div>
               `;
             }).join('')}
