@@ -42,6 +42,15 @@ const CourseDetail: React.FC = () => {
     year: 'numeric'
   });
 
+  const isBirthday = (fechaNacimiento: string | undefined): boolean => {
+    if (!fechaNacimiento) return false;
+    const now = new Date();
+    const birth = new Date(fechaNacimiento);
+    return birth.getUTCMonth() === now.getMonth() && birth.getUTCDate() === now.getDate();
+  };
+
+  const birthdayStudents = students.filter(s => isBirthday(s.fechaNacimiento));
+
   const fetchCourseData = async () => {
     try {
       setLoading(true);
@@ -412,6 +421,22 @@ const CourseDetail: React.FC = () => {
           </div>
         )}
 
+        {/* Birthday Banner */}
+        {birthdayStudents.length > 0 && (
+          <div className="bg-gradient-to-r from-pink-50 via-purple-50 to-pink-50 border border-pink-200 rounded-2xl px-5 py-4 flex flex-col gap-3 shadow-sm">
+            {birthdayStudents.map(s => (
+              <div key={s.estudianteId} className="flex items-center gap-3">
+                <span className="text-3xl">🎂</span>
+                <p className="text-pink-800 font-bold text-base">
+                  ¡Hoy cumple años{' '}
+                  <span className="text-purple-700">{s.nombre} {s.apellido}</span>!
+                  {' '}¡Feliz cumpleaños! 🎉
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Student List */}
         {(!showHistory || isAttendanceMode) && (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -493,8 +518,11 @@ const CourseDetail: React.FC = () => {
                         </div>
                       )}
                       <div>
-                        <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
+                        <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors flex items-center gap-2">
                           {student.nombre} {student.apellido}
+                          {isBirthday(student.fechaNacimiento) && (
+                            <span className="text-base" title="¡Hoy es su cumpleaños!">🎂</span>
+                          )}
                         </h4>
                         <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
                            <span className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">DNI: {student.dni}</span>
