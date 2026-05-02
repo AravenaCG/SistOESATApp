@@ -165,33 +165,34 @@ const InstrumentManager: React.FC = () => {
           <title>Imprimir Etiquetas - ${title}</title>
           <style>
             body { font-family: 'Helvetica', sans-serif; padding: 20px; }
-            h1 { text-align: center; margin-bottom: 30px; font-size: 24px; color: #333; }
-            .grid { 
-              display: grid; 
-              grid-template-columns: repeat(3, 1fr); 
-              gap: 15px; 
+            h1 { text-align: center; margin-bottom: 12px; font-size: 18px; color: #333; }
+            .grid {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 4mm;
             }
-            .label-card { 
-              border: 2px dashed #ccc; 
-              padding: 15px; 
-              text-align: center; 
-              border-radius: 8px;
+            .label-card {
+              border: 2px dashed #ccc;
+              padding: 6px;
+              text-align: center;
+              border-radius: 6px;
               page-break-inside: avoid;
+              height: 60mm;
+              box-sizing: border-box;
               display: flex;
               flex-direction: column;
               align-items: center;
               justify-content: center;
-              position: relative;
             }
-            .qr-code { width: 120px; height: 120px; margin-bottom: 10px; }
-            .item-name { font-weight: bold; font-size: 16px; margin: 5px 0; }
-            .item-code { font-family: monospace; font-size: 14px; color: #000; background: #eee; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
-            .item-serie { font-size: 11px; color: #555; margin-top: 5px; }
-            
+            .qr-code { width: 40mm; height: 40mm; margin-bottom: 4px; }
+            .item-name { font-weight: bold; font-size: 11px; margin: 3px 0; line-height: 1.2; }
+            .item-code { font-family: monospace; font-size: 10px; color: #000; background: #eee; padding: 2px 6px; border-radius: 3px; font-weight: bold; }
+            .item-serie { font-size: 9px; color: #555; margin-top: 3px; }
+
             @media print {
-              body { padding: 0; }
+              body { padding: 0; margin: 0; }
               .no-print { display: none; }
-              @page { margin: 1cm; }
+              @page { size: A4 portrait; margin: 1cm; }
             }
           </style>
         </head>
