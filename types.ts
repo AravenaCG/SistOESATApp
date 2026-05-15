@@ -141,6 +141,7 @@ export interface Student {
   particularidadFisica?: boolean;
   particularidadDetalle?: string;
   cesionImagen?: boolean;
+  asegurado?: boolean;
 }
 
 export interface Course {
