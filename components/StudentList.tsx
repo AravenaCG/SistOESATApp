@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { dataService } from '../services/api';
 import { Student } from '../types';
-import { getInstrumentName } from '../constants';
+import { getInstrumentName, ORCHESTRA_COURSE_NAMES, NO_INSTRUMENT_ORCHESTRAS } from '../constants';
 import * as XLSX from 'xlsx';
 import { Search, Download, Trash2, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -69,6 +69,32 @@ const StudentList: React.FC = () => {
     }
   };
 
+  // Pre-Orquesta y Taller de Iniciación Musical no asignan instrumento individual;
+  // en esos casos mostramos el nombre de la orquesta/curso en vez de "-".
+  const normalize = (value: string) =>
+    value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '');
+
+  const isNoInstrumentCourseName = (name: string) => {
+    const n = normalize(name);
+    return NO_INSTRUMENT_ORCHESTRAS.some(code => n.includes(normalize(ORCHESTRA_COURSE_NAMES[code])));
+  };
+
+  const getInstrumentColumnValue = (s: Student): string => {
+    if (s.instrumentoId) return getInstrumentName(s.instrumentoId);
+
+    if (s.orquesta && NO_INSTRUMENT_ORCHESTRAS.includes(s.orquesta)) {
+      return ORCHESTRA_COURSE_NAMES[s.orquesta];
+    }
+
+    const matchingCourse = s.cursos?.find(c => isNoInstrumentCourseName(c.nombre));
+    if (matchingCourse) return matchingCourse.nombre;
+
+    return '-';
+  };
+
   const handleExport = () => {
     const dataToExport = students.map(s => ({
       ID: s.estudianteId,
@@ -80,7 +106,7 @@ const StudentList: React.FC = () => {
       Teléfono: s.telefono || s.celular || '-',
       Dirección: s.direccion || s.domicilio || '-',
       Nacionalidad: s.nacionalidad || '-',
-      Instrumento: getInstrumentName(s.instrumentoId),
+      Instrumento: getInstrumentColumnValue(s),
       Orquesta: s.orquesta || s.cursos?.map(c => c.nombre).join(', ') || '-',
       Estado: s.activo === false ? 'Inactivo' : 'Activo',
       'Es Menor': s.esMenor ? 'Sí' : 'No',

@@ -19,3 +19,14 @@ export const getInstrumentName = (id?: number): string => {
   if (!id) return "-";
   return INSTRUMENT_MAP[id] || "Desconocido";
 };
+
+// Cursos de orquesta habilitados para inscripción (value del <select> -> nombre real del curso).
+export const ORCHESTRA_COURSE_NAMES: Record<string, string> = {
+  'inicial': 'Orquesta Inicial',
+  'juvenil': 'Orquesta Juvenil',
+  'pre-orquesta': 'Pre-Orquesta',
+  'taller-iniciacion': 'Taller de Iniciación Musical',
+};
+
+// Cursos donde los estudiantes no tienen un instrumento individual asignado.
+export const NO_INSTRUMENT_ORCHESTRAS = ['pre-orquesta', 'taller-iniciacion'];

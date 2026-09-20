@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { authService, dataService } from '../services/api';
 import PublicLayout from './PublicLayout';
-import { getInstrumentName } from '../constants';
+import { getInstrumentName, ORCHESTRA_COURSE_NAMES, NO_INSTRUMENT_ORCHESTRAS } from '../constants';
 
 const RegistrationForm: React.FC = () => {
   const submitLockRef = useRef(false);
@@ -230,12 +230,7 @@ const RegistrationForm: React.FC = () => {
 
           // 1) Enrollment by orchestra selection (inicial, juvenil, pre-orquesta)
           if (formData.orquesta) {
-            const orchestraToCourseName: Record<string, string> = {
-              'inicial': 'Orquesta Inicial',
-              'juvenil': 'Orquesta Juvenil',
-              'pre-orquesta': 'Pre-Orquesta'
-            };
-            const orchestraName = orchestraToCourseName[formData.orquesta];
+            const orchestraName = ORCHESTRA_COURSE_NAMES[formData.orquesta];
             if (orchestraName) {
               const byExact = findCourseByExactName(list, orchestraName);
               const byKeyword = findCourseByKeyword(list, formData.orquesta);
@@ -427,8 +422,8 @@ const RegistrationForm: React.FC = () => {
 
   // --- RENDER: REGISTRATION FORM ---
   
-  // UPDATED: Pre-Orquesta does not allow instrument selection
-  const showInstrument = formData.orquesta === 'inicial' || formData.orquesta === 'juvenil';
+  // Pre-Orquesta y Taller de Iniciación Musical no tienen instrumento individual asignado
+  const showInstrument = !!formData.orquesta && !NO_INSTRUMENT_ORCHESTRAS.includes(formData.orquesta);
   const showProfessor = Number(formData.instrumentoId) === 1; // Only Violin
 
   return (
@@ -527,6 +522,7 @@ const RegistrationForm: React.FC = () => {
                 <option value="inicial">Orquesta Inicial</option>
                 <option value="juvenil">Orquesta Juvenil</option>
                 <option value="pre-orquesta">Pre-Orquesta</option>
+                <option value="taller-iniciacion">Taller de Iniciación Musical</option>
               </select>
 
               <select 
